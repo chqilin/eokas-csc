@@ -1,0 +1,421 @@
+namespace Eokas;
+
+class AstNode
+{
+	public AstCategory category;
+	public AstNode parent;
+
+	public AstNode(AstCategory category, AstNode parent)
+	{
+		this.category = category;
+		this.parent = parent;
+	}
+}
+
+class AstNodeProgram : AstNode
+{
+	public List<AstNodeModule> modules = new List<AstNodeModule>();
+	public AstNodeModule main = null;
+
+	public AstNodeProgram(AstNode parent)
+		: base(AstCategory.PROGRAM, parent)
+	{
+	}
+}
+
+class AstNodeModule : AstNode
+{
+	public String name = "";
+	public Dictionary<String, AstNodeImport> imports = new Dictionary<string, AstNodeImport>();
+	public Dictionary<String, AstNodeExport> exports = new Dictionary<string, AstNodeExport>();
+	public AstNodeFuncDef entry = null;
+
+	public AstNodeModule(AstNode parent)
+		: base(AstCategory.MODULE, parent)
+	{
+	}
+}
+
+class AstNodeImport : AstNode
+{
+	public String name = "";
+
+	public AstNodeImport(AstNode parent)
+		: base(AstCategory.IMPORT, parent)
+	{
+	}
+}
+
+class AstNodeExport : AstNode
+{
+	public AstNodeExport(AstCategory category, AstNode parent)
+		: base(category, parent)
+	{
+	}
+}
+
+class AstNodeType : AstNode
+{
+	public String name = "";
+	public List<AstNodeType> args = new List<AstNodeType>();
+
+	public AstNodeType(AstNode parent)
+		: base(AstCategory.TYPE, parent)
+	{
+	}
+}
+
+class AstNodeExpr : AstNode
+{
+	public AstNodeExpr(AstCategory category, AstNode parent)
+		: base(category, parent)
+	{
+	}
+}
+
+class AstNodeStmt : AstNode
+{
+	public AstNodeStmt(AstCategory category, AstNode parent)
+		: base(category, parent)
+	{
+	}
+}
+
+class AstNodeFuncDef : AstNodeExpr
+{
+	public class Arg
+	{
+		public String name = "";
+		public AstNodeType type = null;
+	};
+
+	public AstNodeType rtype = null;
+	public List<Arg> args = new List<Arg>();
+	public List<AstNodeStmt> body = new List<AstNodeStmt>();
+
+	public AstNodeFuncDef(AstNode parent)
+		:base(AstCategory.FUNC_DEF, parent)
+	{
+	}
+
+	Arg AddArg(String name)
+	{
+		if (this.GetArg(name) != null)
+			return null;
+		
+		var arg = new Arg();
+		arg.name = name;
+		this.args.Add(arg);
+		
+		return arg;
+	}
+
+	Arg GetArg(String name)
+	{
+		foreach (var arg in this.args)
+		{
+			if (arg.name == name)
+				return arg;
+		}
+
+		return null;
+	}
+}
+
+class AstNodeFuncRef : AstNodeExpr
+{
+	AstNodeExpr func = null;
+	private List<AstNodeExpr> args = new List<AstNodeExpr>();
+
+	AstNodeFuncRef(AstNode parent)
+		:base(AstCategory.FUNC_REF, parent)
+	{
+	}
+}
+
+class AstNodeSymbolDef : AstNodeStmt
+{
+	public String name = "";
+	public AstNodeType type = null;
+	public AstNodeExpr value = null;
+	public bool variable = false;
+
+	public AstNodeSymbolDef(AstNode parent)
+		:base(AstCategory.SYMBOL_DEF, parent)
+	{
+	}
+}
+
+class AstNodeSymbolRef : AstNodeExpr
+{
+	public String name = "";
+
+	public AstNodeSymbolRef(AstNode parent)
+		:base(AstCategory.SYMBOL_REF, parent)
+	{
+	}
+}
+
+class AstNodeExprTrinary : AstNodeExpr
+{
+	public AstNodeExpr cond = null;
+	public AstNodeExpr branch_true = null;
+	public AstNodeExpr branch_false = null;
+
+	public AstNodeExprTrinary(AstNode parent)
+		:base(AstCategory.EXPR_TRINARY, parent)
+	{
+	}
+}
+
+class AstNodeExprBinary : AstNodeExpr
+{
+	public AstBinaryOper op = Eokas.AstBinaryOper.UNKNOWN;
+	public AstNodeExpr left = null;
+	public AstNodeExpr right = null;
+
+	public AstNodeExprBinary(AstNode parent)
+		:base(AstCategory.EXPR_BINARY, parent)
+	{
+	}
+}
+
+class AstNodeExprUnary : AstNodeExpr
+{
+	public AstUnaryOper op = AstUnaryOper.UNKNOWN;
+	public AstNodeExpr right = null;
+
+	public AstNodeExprUnary(AstNode parent)
+		:base(AstCategory.EXPR_UNARY, parent)
+	{
+	}
+}
+
+class AstNodeLiteralInt : AstNodeExpr
+{
+	public long value = 0;
+
+	public AstNodeLiteralInt(AstNode parent)
+		:base(AstCategory.LITERAL_INT, parent)
+	{
+	}
+}
+
+class AstNodeLiteralFloat : AstNodeExpr
+{
+	public double value = 0;
+
+	public AstNodeLiteralFloat(AstNode parent)
+		:base(AstCategory.LITERAL_FLOAT, parent)
+	{
+	}
+}
+
+class AstNodeLiteralBool : AstNodeExpr
+{
+	public bool value = false;
+
+	public AstNodeLiteralBool(AstNode parent)
+		:base(AstCategory.LITERAL_BOOL, parent)
+	{
+	}
+}
+
+class AstNodeLiteralString : AstNodeExpr
+{
+	public String value = "";
+
+	public AstNodeLiteralString(AstNode parent)
+		:base(AstCategory.LITERAL_STRING, parent)
+	{
+	}
+}
+
+class AstNodeArrayDef : AstNodeExpr
+{
+	public List<AstNodeExpr> elements = new List<AstNodeExpr>();
+
+	AstNodeArrayDef(AstNode parent)
+		: base(AstCategory.ARRAY_DEF, parent)
+	{
+	}
+}
+
+class AstNodeArrayRef : AstNodeExpr
+{
+	public AstNodeExpr obj = null;
+	public AstNodeExpr key = null;
+
+	public AstNodeArrayRef(AstNode parent)
+		: base(AstCategory.ARRAY_REF, parent)
+	{
+	}
+}
+
+class AstNodeObjectDef : AstNodeExpr
+{
+	public AstNodeType type = null;
+	public Dictionary<String, AstNodeExpr> members = new Dictionary<string, AstNodeExpr>();
+
+	public AstNodeObjectDef(AstNode parent)
+		: base(AstCategory.OBJECT_DEF, parent)
+	{
+	}
+}
+
+class AstNodeObjectRef : AstNodeExpr
+{
+	public AstNodeExpr obj = null;
+	public String key = "";
+
+	public AstNodeObjectRef(AstNode parent)
+		: base(AstCategory.OBJECT_REF, parent)
+	{
+	}
+}
+
+class AstNodeStructDef : AstNodeStmt
+{
+	public class Member
+	{
+		public String name = "";
+		public AstNodeType type = null;
+		public AstNodeExpr value = null;
+		public bool isConst = false;
+	};
+
+	public String name = "";
+	public List<Member> members = new List<Member>();
+
+	public AstNodeStructDef(AstNode parent)
+		: base(AstCategory.STRUCT_DEF, parent)
+	{
+	}
+
+	Member AddMember(String name)
+	{
+		if (this.GetMember(name) == null)
+			return null;
+
+		var m = new Member();
+		m.name = name;
+		this.members.Add(m);
+		
+		return m;
+	}
+
+	Member GetMember(String name)
+	{
+		foreach (var m in this.members)
+		{
+			if (m.name == name)
+				return m;
+		}
+		return null;
+	}
+}
+
+class AstNodeEnumDef : AstNodeStmt
+{
+	String name = "";
+	private Dictionary<String, int> members = new Dictionary<string, int>();
+
+	public AstNodeEnumDef(AstNode parent)
+		: base(AstCategory.ENUM_DEF, parent)
+	{
+	}
+}
+
+class AstNodeProcDef : AstNodeStmt
+{
+	String name = "";
+	AstNodeType type = null;
+	private Dictionary<String, AstNodeType> args = new Dictionary<string, AstNodeType>();
+
+	public AstNodeProcDef(AstNode parent)
+		: base(AstCategory.PROC_DEF, parent)
+	{
+	}
+}
+
+class AstNodeReturn : AstNodeStmt
+{
+	AstNodeExpr value = null;
+
+	public AstNodeReturn(AstNode parent)
+		:base(AstCategory.RETURN, parent)
+	{
+	}
+}
+
+class AstNodeIf : AstNodeStmt
+{
+	AstNodeExpr cond = null;
+	AstNodeStmt branch_true = null;
+	AstNodeStmt branch_false = null;
+
+	public AstNodeIf(AstNode parent)
+		:base(AstCategory.IF, parent)
+	{
+	}
+}
+
+class AstNodeLoop : AstNodeStmt
+{
+	AstNodeStmt init = null;
+	AstNodeExpr cond = null;
+	AstNodeStmt step = null;
+	AstNodeStmt body = null;
+
+	public AstNodeLoop(AstNode parent)
+		:base(AstCategory.LOOP, parent)
+	{
+	}
+}
+
+class AstNodeBreak : AstNodeStmt
+{
+	public AstNodeBreak(AstNode parent)
+		:base(AstCategory.BREAK, parent)
+	{
+	}
+}
+
+class AstNodeContinue : AstNodeStmt
+{
+	public AstNodeContinue(AstNode parent)
+		: base(AstCategory.CONTINUE, parent)
+	{
+	}
+}
+
+class AstNodeBlock : AstNodeStmt
+{
+	private List<AstNodeStmt> stmts = new List<AstNodeStmt>();
+
+	public AstNodeBlock(AstNode parent)
+		: base(AstCategory.BLOCK, parent)
+	{
+	}
+}
+
+class AstNodeAssign : AstNodeStmt
+{
+	AstNodeExpr left = null;
+	AstNodeExpr right = null;
+
+	public AstNodeAssign(AstNode parent)
+		:base(AstCategory.ASSIGN, parent)
+	{
+	}
+}
+
+class AstNodeInvoke : AstNodeStmt
+{
+	AstNodeFuncRef expr = null;
+
+	public AstNodeInvoke(AstNode parent)
+		: base(AstCategory.INVOKE, parent)
+	{
+	}
+}
