@@ -154,7 +154,7 @@ class AstNodeFuncDef : AstNodeExpr
 	{
 	}
 
-	Arg AddArg(String name)
+	public Arg AddArg(String name)
 	{
 		if (this.GetArg(name) != null)
 			return null;
@@ -166,7 +166,7 @@ class AstNodeFuncDef : AstNodeExpr
 		return arg;
 	}
 
-	Arg GetArg(String name)
+	public Arg GetArg(String name)
 	{
 		foreach (var arg in this.args)
 		{
@@ -180,10 +180,10 @@ class AstNodeFuncDef : AstNodeExpr
 
 class AstNodeFuncRef : AstNodeExpr
 {
-	AstNodeExpr func = null;
-	private List<AstNodeExpr> args = new List<AstNodeExpr>();
+	public AstNodeExpr func = null;
+	public List<AstNodeExpr> args = new List<AstNodeExpr>();
 
-	AstNodeFuncRef(AstNode parent)
+	public AstNodeFuncRef(AstNode parent)
 		:base(AstCategory.FUNC_REF, parent)
 	{
 	}
@@ -291,7 +291,7 @@ class AstNodeArrayDef : AstNodeExpr
 {
 	public List<AstNodeExpr> elements = new List<AstNodeExpr>();
 
-	AstNodeArrayDef(AstNode parent)
+	public AstNodeArrayDef(AstNode parent)
 		: base(AstCategory.ARRAY_DEF, parent)
 	{
 	}
@@ -348,7 +348,7 @@ class AstNodeStructDef : AstNodeStmt
 	{
 	}
 
-	Member AddMember(String name)
+	public Member AddMember(String name)
 	{
 		if (this.GetMember(name) == null)
 			return null;
@@ -360,7 +360,7 @@ class AstNodeStructDef : AstNodeStmt
 		return m;
 	}
 
-	Member GetMember(String name)
+	public Member GetMember(String name)
 	{
 		foreach (var m in this.members)
 		{
@@ -373,8 +373,8 @@ class AstNodeStructDef : AstNodeStmt
 
 class AstNodeEnumDef : AstNodeStmt
 {
-	String name = "";
-	private Dictionary<String, int> members = new Dictionary<string, int>();
+	public String name = "";
+	public Dictionary<String, int> members = new Dictionary<string, int>();
 
 	public AstNodeEnumDef(AstNode parent)
 		: base(AstCategory.ENUM_DEF, parent)
@@ -384,9 +384,9 @@ class AstNodeEnumDef : AstNodeStmt
 
 class AstNodeProcDef : AstNodeStmt
 {
-	String name = "";
-	AstNodeType type = null;
-	private Dictionary<String, AstNodeType> args = new Dictionary<string, AstNodeType>();
+	public String name = "";
+	public AstNodeType type = null;
+	public Dictionary<String, AstNodeType> args = new Dictionary<string, AstNodeType>();
 
 	public AstNodeProcDef(AstNode parent)
 		: base(AstCategory.PROC_DEF, parent)
@@ -396,7 +396,7 @@ class AstNodeProcDef : AstNodeStmt
 
 class AstNodeReturn : AstNodeStmt
 {
-	AstNodeExpr value = null;
+	public AstNodeExpr value = null;
 
 	public AstNodeReturn(AstNode parent)
 		:base(AstCategory.RETURN, parent)
@@ -406,9 +406,9 @@ class AstNodeReturn : AstNodeStmt
 
 class AstNodeIf : AstNodeStmt
 {
-	AstNodeExpr cond = null;
-	AstNodeStmt branch_true = null;
-	AstNodeStmt branch_false = null;
+	public AstNodeExpr cond = null;
+	public AstNodeStmt branch_true = null;
+	public AstNodeStmt branch_false = null;
 
 	public AstNodeIf(AstNode parent)
 		:base(AstCategory.IF, parent)
@@ -418,10 +418,10 @@ class AstNodeIf : AstNodeStmt
 
 class AstNodeLoop : AstNodeStmt
 {
-	AstNodeStmt init = null;
-	AstNodeExpr cond = null;
-	AstNodeStmt step = null;
-	AstNodeStmt body = null;
+	public AstNodeStmt init = null;
+	public AstNodeExpr cond = null;
+	public AstNodeStmt step = null;
+	public AstNodeStmt body = null;
 
 	public AstNodeLoop(AstNode parent)
 		:base(AstCategory.LOOP, parent)
@@ -447,7 +447,7 @@ class AstNodeContinue : AstNodeStmt
 
 class AstNodeBlock : AstNodeStmt
 {
-	private List<AstNodeStmt> stmts = new List<AstNodeStmt>();
+	public List<AstNodeStmt> stmts = new List<AstNodeStmt>();
 
 	public AstNodeBlock(AstNode parent)
 		: base(AstCategory.BLOCK, parent)
@@ -457,8 +457,8 @@ class AstNodeBlock : AstNodeStmt
 
 class AstNodeAssign : AstNodeStmt
 {
-	AstNodeExpr left = null;
-	AstNodeExpr right = null;
+	public AstNodeExpr left = null;
+	public AstNodeExpr right = null;
 
 	public AstNodeAssign(AstNode parent)
 		:base(AstCategory.ASSIGN, parent)
@@ -468,7 +468,7 @@ class AstNodeAssign : AstNodeStmt
 
 class AstNodeInvoke : AstNodeStmt
 {
-	AstNodeFuncRef expr = null;
+	public AstNodeFuncRef expr = null;
 
 	public AstNodeInvoke(AstNode parent)
 		: base(AstCategory.INVOKE, parent)

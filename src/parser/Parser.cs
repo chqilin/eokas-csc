@@ -28,7 +28,7 @@ public class Parser
 		module.entry = new AstNodeFuncDef(module);
 
 		this.NextToken();
-		while (this.token().type != Token.Type.EOS)
+		while (this.token.type != Token.Type.EOS)
 		{
 			// TODO: import
 			// TODO: export
@@ -59,7 +59,7 @@ public class Parser
 		if(!this.CheckToken(Token.Type.ID, true, false))
 			return null;
 		
-		String name = this.token().value;
+		String name = this.token.value;
 		var node = new AstNodeType(p);
 		node.name = name;
 		
@@ -184,7 +184,7 @@ public class Parser
 		
 		AstNodeExpr right = null;
 		
-		Token token = this.token();
+		Token token = this.token;
 		switch (token.type)
 		{
 			case Token.Type.INT_B:
@@ -249,7 +249,7 @@ public class Parser
 		{
 			AstNodeExpr suffixed = null;
 			
-			Token token = this.token();
+			Token token = this.token;
 			switch (token.type)
 			{
 				case Token.Type.DOT: // .
@@ -295,7 +295,7 @@ public class Parser
 			return null;
 		
 		var node = new AstNodeSymbolRef(p);
-		node.name = this.token().value;
+		node.name = this.token.value;
 		
 		this.NextToken();
 		
@@ -304,7 +304,7 @@ public class Parser
 	
 	AstNodeExpr ParseLiteralInt(AstNode p)
 	{
-		Token token = this.token();
+		Token token = this.token;
 		switch (token.type)
 		{
 			case Token.Type.INT_B:
@@ -336,7 +336,7 @@ public class Parser
 	
 	AstNodeExpr ParseLiteralFloat(AstNode p)
 	{
-		Token token = this.token();
+		Token token = this.token;
 		switch (token.type)
 		{
 			case Token.Type.FLOAT:
@@ -354,7 +354,7 @@ public class Parser
 	
 	AstNodeExpr ParseLiteralBool(AstNode p)
 	{
-		Token token = this.token();
+		Token token = this.token;
 		switch (token.type)
 		{
 			case Token.Type.TRUE:
@@ -373,7 +373,7 @@ public class Parser
 	
 	AstNodeExpr ParseLiteralString(AstNode p)
 	{
-		Token token = this.token();
+		Token token = this.token;
 		switch (token.type)
 		{
 			case Token.Type.STRING:
@@ -425,13 +425,13 @@ public class Parser
 		
 		do
 		{
-			if(this.token().type == Token.Type.RRB)
+			if(this.token.type == Token.Type.RRB)
 				break;
 			
 			if(!this.CheckToken(Token.Type.ID, true, false))
 				return false;
-			String name = this.token().value;
-			if(node.getArg(name) != null)
+			String name = this.token.value;
+			if(node.GetArg(name) != null)
 			{
 				this.ErrorTokenUnexpected();
 				return false;
@@ -445,7 +445,7 @@ public class Parser
 			if(type == null)
 				return false;
 			
-			var arg = node.addArg(name);
+			var arg = node.AddArg(name);
 			if(arg == null)
 			{
 				this.ErrorTokenUnexpected();
@@ -493,15 +493,15 @@ public class Parser
 			return null;
 		
 		while (!this.CheckToken(Token.Type.RRB, false))
-		{
-			if(!node.args.empty() && !this.CheckToken(Token.Type.COMMA))
+		{ 
+			if(node.args.Count > 0 && !this.CheckToken(Token.Type.COMMA))
 				return null;
 			
 			AstNodeExpr arg = this.ParseExpr(node);
 			if(arg == null)
 				return null;
 			
-			node.args.push_back(arg);
+			node.args.Add(arg);
 		}
 		
 		// 确保所有解析成功后，才能将 primary 赋值给 node，
@@ -531,7 +531,7 @@ public class Parser
 		
 		do
 		{
-			if(this.token().type == Token.Type.RCB)
+			if(this.token.type == Token.Type.RCB)
 				break;
 			if(!this.ParseObjectField(node))
 				return null;
@@ -551,7 +551,7 @@ public class Parser
 		if(!this.CheckToken(Token.Type.ID, true, false))
 			return false;
 		
-		String key = this.token().value;
+		String key = this.token.value;
 		this.NextToken();
 		
 		if(!this.CheckToken(Token.Type.ASSIGN, false) && !this.CheckToken(Token.Type.COLON, false))
@@ -581,14 +581,14 @@ public class Parser
 		
 		do
 		{
-			if(this.token().type == Token.Type.RSB)
+			if(this.token.type == Token.Type.RSB)
 				break;
 			
 			AstNodeExpr expr = this.ParseExpr(node);
 			if(expr == null)
 				return null;
 			
-			node.elements.push_back(expr);
+			node.elements.Add(expr);
 		} while (this.CheckToken(Token.Type.COMMA, false));
 		
 		if(!this.CheckToken(Token.Type.RSB))
@@ -633,7 +633,7 @@ public class Parser
 		if(!this.CheckToken(Token.Type.ID, true, false))
 			return null;
 		
-		node.key = this.token().value;
+		node.key = this.token.value;
 		
 		this.NextToken();
 		
@@ -648,7 +648,7 @@ public class Parser
 		AstNodeStmt stmt = null;
 		bool semicolon = false;
 		
-		switch (this.token().type)
+		switch (this.token.type)
 		{
 			case Token.Type.STRUCT:
 				stmt = this.ParseStmtStructDef(p);
@@ -689,6 +689,7 @@ public class Parser
 			default:
 				stmt = this.ParseStmt_assign_or_call(p);
 				semicolon = true;
+				break;
 		}
 		
 		if(semicolon && !this.CheckToken(Token.Type.SEMICOLON))
@@ -711,7 +712,7 @@ public class Parser
 		if(!this.CheckToken(Token.Type.ID, true, false))
 			return null;
 		
-		node.name = this.token().value;
+		node.name = this.token.value;
 		this.NextToken();
 		
 		// {
@@ -720,7 +721,7 @@ public class Parser
 		
 		do
 		{
-			if(this.token().type == Token.Type.RCB)
+			if(this.token.type == Token.Type.RCB)
 				break;
 			
 			if(!this.ParseStmt_struct_member(node))
@@ -742,10 +743,12 @@ public class Parser
 	{
 		// (val | var)
 		bool isConst = false;
-		switch (this.token().type)
+		switch (this.token.type)
 		{
 			case Token.Type.VAL: isConst = true;
+				break;
 			case Token.Type.VAR: isConst = false;
+				break;
 			default:
 				return false;
 		}
@@ -755,8 +758,8 @@ public class Parser
 		if(!this.CheckToken(Token.Type.ID, true, false))
 			return false;
 		
-		String name = this.token().value;
-		var node = p.addMember(name);
+		String name = this.token.value;
+		var node = p.AddMember(name);
 		if(node == null)
 		{
 			this.ErrorTokenUnexpected();
@@ -797,7 +800,7 @@ public class Parser
 		if(!this.CheckToken(Token.Type.ID, true, false))
 			return null;
 		
-		node.name = this.token().value;
+		node.name = this.token.value;
 		this.NextToken();
 		
 		// {
@@ -807,15 +810,15 @@ public class Parser
 		int index = 0;
 		do
 		{
-			if(this.token().type == Token.Type.RCB)
+			if(this.token.type == Token.Type.RCB)
 				break;
 			
 			// ID
 			if(!this.CheckToken(Token.Type.ID, true, false))
 				return null;
 			
-			String memName = this.token().value;
-			if(node.members.find(memName) != node.members.end())
+			String memName = this.token.value;
+			if(node.members.ContainsKey(memName))
 			{
 				this.ErrorTokenUnexpected();
 				return null;
@@ -826,7 +829,7 @@ public class Parser
 			int memValue = index;
 			if(this.CheckToken(Token.Type.ASSIGN, false))
 			{
-				auto memExpr = this.ParseLiteralInt(node);
+				var memExpr = this.ParseLiteralInt(node);
 				if(memExpr == null)
 					return null;
 				var memIntExpr = memExpr as AstNodeLiteralInt;
@@ -860,7 +863,7 @@ public class Parser
 		if(!this.CheckToken(Token.Type.ID, true, false))
 			return null;
 		
-		node.name = this.token().value;
+		node.name = this.token.value;
 		this.NextToken();
 		
 		// (
@@ -869,15 +872,15 @@ public class Parser
 		
 		do
 		{
-			if(this.token().type == Token.Type.RRB)
+			if(this.token.type == Token.Type.RRB)
 				break;
 			
 			// ID
 			if(!this.CheckToken(Token.Type.ID, true, false))
 				return null;
 			
-			String argName = this.token().value;
-			if(node.args.find(argName) != node.args.end())
+			String argName = this.token.value;
+			if(node.args.ContainsKey(argName))
 			{
 				this.ErrorTokenUnexpected();
 				return null;
@@ -919,14 +922,14 @@ public class Parser
 		}
 		
 		var node = new AstNodeSymbolDef(p);
-		node.variable = this.token().type == Token.Type.VAR;
+		node.variable = this.token.type == Token.Type.VAR;
 		
 		this.NextToken(); // ignore 'var' | 'val'
 		
 		if(!this.CheckToken(Token.Type.ID, true, false))
 			return null;
 		
-		node.name = this.token().value;
+		node.name = this.token.value;
 		
 		this.NextToken();
 		
@@ -1076,7 +1079,7 @@ public class Parser
 	AstNodeStmt ParseStmtLoop_step(AstNode p)
 	{
 		AstNodeStmt stmt = null;
-		switch (this.token().type)
+		switch (this.token.type)
 		{
 			case Token.Type.VAR:
 			case Token.Type.VAL:
@@ -1103,7 +1106,7 @@ public class Parser
 			if(stmt == null)
 				return null;
 			
-			node.stmts.push_back(stmt);
+			node.stmts.Add(stmt);
 			
 			this.CheckToken(Token.Type.SEMICOLON, false);
 		}
@@ -1148,12 +1151,9 @@ public class Parser
 	{
 		this.lexer.NextToken();
 	}
-	
-	Token token()
-	{
-		return this.lexer.token;
-	}
-	
+
+	Token token => this.lexer.token;
+
 	Token look_ahead_token()
 	{
 		return this.lexer.lookAheadToken;
