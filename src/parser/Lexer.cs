@@ -44,7 +44,7 @@ public class Lexer
 		this.Clear();
 	}
 	
-	void Clear()
+	public void Clear()
 	{
 		this.source = "";
 		this.position = 0;
@@ -56,7 +56,7 @@ public class Lexer
 		this.mLookAheadToken.Clear();
 	}
 	
-	void Ready(string source)
+	public void Ready(string source)
 	{
 		this.Clear();
 		this.source = source;
@@ -64,7 +64,7 @@ public class Lexer
 		this.ReadChar();
 	}
 
-	void NextToken()
+	public void NextToken()
 	{
 		if(this.mLookAheadToken.type != Token.Type.UNKNOWN)
 		{

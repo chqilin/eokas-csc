@@ -14,7 +14,6 @@
 
   <ItemGroup>
     <Folder Include="samples" />
-    <Folder Include="src\llvm" />
   </ItemGroup>
 
 </Project>
