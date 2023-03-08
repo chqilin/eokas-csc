@@ -3,10 +3,8 @@ namespace Eokas;
 enum AstCategory
 {
 	NONE,
-
-	PROGRAM,
-
-	MODULE, IMPORT, EXPORT,
+	
+	MODULE, USING,
 
 	TYPE,
 		
@@ -59,7 +57,7 @@ struct AstPosition
 class AstNode
 {
 	public AstCategory category;
-	public AstNode parent;
+	public AstNode? parent;
 
 	public AstNode(AstCategory category, AstNode parent)
 	{
@@ -68,22 +66,10 @@ class AstNode
 	}
 }
 
-class AstNodeProgram : AstNode
-{
-	public List<AstNodeModule> modules = new List<AstNodeModule>();
-	public AstNodeModule main = null;
-
-	public AstNodeProgram(AstNode parent)
-		: base(AstCategory.PROGRAM, parent)
-	{
-	}
-}
-
 class AstNodeModule : AstNode
 {
 	public String name = "";
-	public Dictionary<String, AstNodeImport> imports = new Dictionary<string, AstNodeImport>();
-	public Dictionary<String, AstNodeExport> exports = new Dictionary<string, AstNodeExport>();
+	public Dictionary<String, AstNodeUsing> imports = new Dictionary<string, AstNodeUsing>();
 	public AstNodeFuncDef entry = null;
 
 	public AstNodeModule(AstNode parent)
@@ -92,20 +78,12 @@ class AstNodeModule : AstNode
 	}
 }
 
-class AstNodeImport : AstNode
+class AstNodeUsing : AstNode
 {
 	public String name = "";
 
-	public AstNodeImport(AstNode parent)
-		: base(AstCategory.IMPORT, parent)
-	{
-	}
-}
-
-class AstNodeExport : AstNode
-{
-	public AstNodeExport(AstCategory category, AstNode parent)
-		: base(category, parent)
+	public AstNodeUsing(AstNode parent)
+		: base(AstCategory.USING, parent)
 	{
 	}
 }
@@ -154,7 +132,7 @@ class AstNodeFuncDef : AstNodeExpr
 	{
 	}
 
-	public Arg AddArg(String name)
+	public Arg? AddArg(String name)
 	{
 		if (this.GetArg(name) != null)
 			return null;
@@ -166,7 +144,7 @@ class AstNodeFuncDef : AstNodeExpr
 		return arg;
 	}
 
-	public Arg GetArg(String name)
+	public Arg? GetArg(String name)
 	{
 		foreach (var arg in this.args)
 		{
