@@ -1,4 +1,6 @@
 
+using System.Runtime.InteropServices;
+
 namespace Eokas;
 
 using LLVMSharp;
@@ -66,7 +68,13 @@ public class LLVMEngine
 	    LLVM.SetDataLayout(module, dataLayout.ToString());
 	    LLVM.SetTarget(module, targetTriple.ToString());
 
-	    
+	    IntPtr fileName = Marshal.StringToHGlobalAnsi("fileName.o");
+	    if (LLVM.TargetMachineEmitToFile(
+		        targetMachine, module, fileName, LLVMCodeGenFileType.LLVMObjectFile,
+		        out var errors).Value != 0)
+	    {
+		    return false;
+	    }
 	    
 	    return true;
     }
