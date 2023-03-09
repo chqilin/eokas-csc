@@ -6,7 +6,7 @@ public class Parser
 
 	public string error { get; private set; }
 
-	AstNodeModule Parse(string source)
+	public AstNodeModule Parse(string source)
 	{
 		this.Clear();
 		this.lexer.Ready(source);

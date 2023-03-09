@@ -1,36 +1,28 @@
 ﻿
 namespace Eokas
 {
-    using LLVMSharp;
-    
     internal class Program
     {
         private static string EOKAS_VERSION = "0.0.1";
-        
+
         static int Main(string[] args)
         {
             Command program = new Command(args[0]);
-            program.Action((cmd) =>
-            {
-                About();
-            });
+            program.Action((cmd) => { About(); });
             program.SubCommand("help", "")
-                .Action((cmd)=>
-                {
-                    Help();
-                });
-	
+                .Action((cmd) => { Help(); });
+
             program.SubCommand("compile", "")
                 .Option("--file,-f", "", "")
-                .Action((cmd)=>
+                .Action((cmd) =>
                 {
                     var file = cmd.FetchValue("--file");
-                    if(file == "")
+                    if (file == "")
                         throw new Exception("The argument 'file' is empty.");
-                    
+
                     Console.WriteLine("=> Source file: {0}", file);
-			
-                    //eokas_main(file, llvm_aot);
+
+                    EokasMain(file, LLVMEngine.AOT);
                 });
 
             program.SubCommand("run", "")
@@ -38,69 +30,54 @@ namespace Eokas
                 .Action((cmd) =>
                 {
                     var file = cmd.FetchValue("--file");
-                    if(file == "")
+                    if (file == "")
                         throw new Exception("The argument 'file' is empty.");
-                    
+
                     Console.WriteLine("=> Source file: {0}", file);
-                    
-                    // eokas_main(file, llvm_jit);
+
+                    EokasMain(file, LLVMEngine.JIT);
                 });
-		
+
             try
             {
                 program.Execute(args);
                 return 0;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine("ERROR: {0}", e.Message);
                 return -1;
             }
         }
 
-        static void EokasMain(string fileName)
+        static void EokasMain(string fileName, Predicate<AstNodeModule> method)
         {
-            /*
-            static void eokas_main(const String& fileName, bool(*proc)(ast_node_module_t* m))
+            var reader = File.OpenText(fileName);
+            var source = reader.ReadToEnd();
+            reader.Close();
+
+            Console.WriteLine("=> Source code:");
+            Console.WriteLine("------------------------------------------");
+            Console.WriteLine("{0}", source.Replace("%", "%%"));
+            Console.WriteLine("------------------------------------------");
+
+            Parser parser = new Parser();
+            AstNodeModule m = parser.Parse(source);
+            if (m == null)
             {
-                FileStream in(fileName, "rb");
-                if(!in.open())
+                Console.WriteLine("ERROR: {0}", parser.error);
                 return;
-	
-                size_t size = in.size();
-                MemoryBuffer buffer(size);
-                    in.read(buffer.data(), buffer.size());
-                    in.close();
-	
-                String source((const char*) buffer.data(), buffer.size());
-                printf("=> Source code:\n");
-                printf("------------------------------------------\n");
-                printf("%s\n", source.replace("%", "%%").cstr());
-                printf("------------------------------------------\n");
-	
-                parser_t parser;
-                ast_node_module_t* m = parser.parse(source.cstr());
-                printf("=> Module AST: %llX\n", (u64_t)m);
-                if(m == nullptr)
-                {
-                    const String& error = parser.error();
-                    printf("ERROR: %s\n", error.cstr());
-                    return;
-                }
-	
-                FileStream out(String::format("%s.ll", fileName.cstr()), "w+");
-                if(!out.open())
-                return;
-	
-                printf("=> Encode to IR:\n");
-                printf("------------------------------------------\n");
-                proc(m);
-                printf("------------------------------------------\n");
-                    out.close();
             }
-            */
+
+            var writer = File.OpenWrite(string.Format("{0}.ll", fileName));
+            Console.WriteLine("=> Encode to IR:");
+            Console.WriteLine("------------------------------------------");
+            method(m);
+            Console.WriteLine("------------------------------------------");
+            writer.Flush();
+            writer.Close();
         }
-        
+
         static void About()
         {
             Console.WriteLine("eokas {0}\n", EOKAS_VERSION);
