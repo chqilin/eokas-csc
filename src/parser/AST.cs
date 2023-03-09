@@ -1,6 +1,6 @@
 namespace Eokas;
 
-enum AstCategory
+public enum AstCategory
 {
 	NONE,
 	
@@ -21,7 +21,7 @@ enum AstCategory
 	RETURN, IF, LOOP, BREAK, CONTINUE, BLOCK, ASSIGN, INVOKE,
 }
 	
-enum AstBinaryOper
+public enum AstBinaryOper
 {
 	OR = 100,
 	AND = 200,
@@ -33,7 +33,7 @@ enum AstBinaryOper
 	UNKNOWN = 0x7FFFFFFF
 }
 	
-enum AstUnaryOper
+public enum AstUnaryOper
 {
 	POS = 900, NEG, FLIP, SIZE_OF, TYPE_OF,
 	NOT = 1000,
@@ -41,7 +41,7 @@ enum AstUnaryOper
 	UNKNOWN = 0x7FFFFFFF
 }
 	
-struct AstPosition
+public struct AstPosition
 {
 	int row;
 	int col;
@@ -54,7 +54,7 @@ struct AstPosition
 }
 
 
-class AstNode
+public class AstNode
 {
 	public AstCategory category;
 	public AstNode? parent;
@@ -66,7 +66,7 @@ class AstNode
 	}
 }
 
-class AstNodeModule : AstNode
+public class AstNodeModule : AstNode
 {
 	public String name = "";
 	public Dictionary<String, AstNodeUsing> imports = new Dictionary<string, AstNodeUsing>();
@@ -78,7 +78,7 @@ class AstNodeModule : AstNode
 	}
 }
 
-class AstNodeUsing : AstNode
+public class AstNodeUsing : AstNode
 {
 	public String name = "";
 
@@ -88,7 +88,7 @@ class AstNodeUsing : AstNode
 	}
 }
 
-class AstNodeType : AstNode
+public class AstNodeType : AstNode
 {
 	public String name = "";
 	public List<AstNodeType> args = new List<AstNodeType>();
@@ -99,7 +99,7 @@ class AstNodeType : AstNode
 	}
 }
 
-class AstNodeExpr : AstNode
+public class AstNodeExpr : AstNode
 {
 	public AstNodeExpr(AstCategory category, AstNode parent)
 		: base(category, parent)
@@ -107,7 +107,7 @@ class AstNodeExpr : AstNode
 	}
 }
 
-class AstNodeStmt : AstNode
+public class AstNodeStmt : AstNode
 {
 	public AstNodeStmt(AstCategory category, AstNode parent)
 		: base(category, parent)
@@ -115,7 +115,7 @@ class AstNodeStmt : AstNode
 	}
 }
 
-class AstNodeFuncDef : AstNodeExpr
+public class AstNodeFuncDef : AstNodeExpr
 {
 	public class Arg
 	{
@@ -156,7 +156,7 @@ class AstNodeFuncDef : AstNodeExpr
 	}
 }
 
-class AstNodeFuncRef : AstNodeExpr
+public class AstNodeFuncRef : AstNodeExpr
 {
 	public AstNodeExpr func = null;
 	public List<AstNodeExpr> args = new List<AstNodeExpr>();
@@ -167,7 +167,7 @@ class AstNodeFuncRef : AstNodeExpr
 	}
 }
 
-class AstNodeSymbolDef : AstNodeStmt
+public class AstNodeSymbolDef : AstNodeStmt
 {
 	public String name = "";
 	public AstNodeType type = null;
@@ -180,7 +180,7 @@ class AstNodeSymbolDef : AstNodeStmt
 	}
 }
 
-class AstNodeSymbolRef : AstNodeExpr
+public class AstNodeSymbolRef : AstNodeExpr
 {
 	public String name = "";
 
@@ -190,7 +190,7 @@ class AstNodeSymbolRef : AstNodeExpr
 	}
 }
 
-class AstNodeExprTrinary : AstNodeExpr
+public class AstNodeExprTrinary : AstNodeExpr
 {
 	public AstNodeExpr cond = null;
 	public AstNodeExpr branch_true = null;
@@ -202,7 +202,7 @@ class AstNodeExprTrinary : AstNodeExpr
 	}
 }
 
-class AstNodeExprBinary : AstNodeExpr
+public class AstNodeExprBinary : AstNodeExpr
 {
 	public AstBinaryOper op = Eokas.AstBinaryOper.UNKNOWN;
 	public AstNodeExpr left = null;
@@ -214,7 +214,7 @@ class AstNodeExprBinary : AstNodeExpr
 	}
 }
 
-class AstNodeExprUnary : AstNodeExpr
+public class AstNodeExprUnary : AstNodeExpr
 {
 	public AstUnaryOper op = AstUnaryOper.UNKNOWN;
 	public AstNodeExpr right = null;
@@ -225,7 +225,7 @@ class AstNodeExprUnary : AstNodeExpr
 	}
 }
 
-class AstNodeLiteralInt : AstNodeExpr
+public class AstNodeLiteralInt : AstNodeExpr
 {
 	public long value = 0;
 
@@ -235,7 +235,7 @@ class AstNodeLiteralInt : AstNodeExpr
 	}
 }
 
-class AstNodeLiteralFloat : AstNodeExpr
+public class AstNodeLiteralFloat : AstNodeExpr
 {
 	public double value = 0;
 
@@ -245,7 +245,7 @@ class AstNodeLiteralFloat : AstNodeExpr
 	}
 }
 
-class AstNodeLiteralBool : AstNodeExpr
+public class AstNodeLiteralBool : AstNodeExpr
 {
 	public bool value = false;
 
@@ -255,7 +255,7 @@ class AstNodeLiteralBool : AstNodeExpr
 	}
 }
 
-class AstNodeLiteralString : AstNodeExpr
+public class AstNodeLiteralString : AstNodeExpr
 {
 	public String value = "";
 
@@ -265,7 +265,7 @@ class AstNodeLiteralString : AstNodeExpr
 	}
 }
 
-class AstNodeArrayDef : AstNodeExpr
+public class AstNodeArrayDef : AstNodeExpr
 {
 	public List<AstNodeExpr> elements = new List<AstNodeExpr>();
 
@@ -275,7 +275,7 @@ class AstNodeArrayDef : AstNodeExpr
 	}
 }
 
-class AstNodeArrayRef : AstNodeExpr
+public class AstNodeArrayRef : AstNodeExpr
 {
 	public AstNodeExpr obj = null;
 	public AstNodeExpr key = null;
@@ -286,7 +286,7 @@ class AstNodeArrayRef : AstNodeExpr
 	}
 }
 
-class AstNodeObjectDef : AstNodeExpr
+public class AstNodeObjectDef : AstNodeExpr
 {
 	public AstNodeType type = null;
 	public Dictionary<String, AstNodeExpr> members = new Dictionary<string, AstNodeExpr>();
@@ -297,7 +297,7 @@ class AstNodeObjectDef : AstNodeExpr
 	}
 }
 
-class AstNodeObjectRef : AstNodeExpr
+public class AstNodeObjectRef : AstNodeExpr
 {
 	public AstNodeExpr obj = null;
 	public String key = "";
@@ -308,7 +308,7 @@ class AstNodeObjectRef : AstNodeExpr
 	}
 }
 
-class AstNodeStructDef : AstNodeStmt
+public class AstNodeStructDef : AstNodeStmt
 {
 	public class Member
 	{
@@ -349,7 +349,7 @@ class AstNodeStructDef : AstNodeStmt
 	}
 }
 
-class AstNodeEnumDef : AstNodeStmt
+public class AstNodeEnumDef : AstNodeStmt
 {
 	public String name = "";
 	public Dictionary<String, int> members = new Dictionary<string, int>();
@@ -360,7 +360,7 @@ class AstNodeEnumDef : AstNodeStmt
 	}
 }
 
-class AstNodeProcDef : AstNodeStmt
+public class AstNodeProcDef : AstNodeStmt
 {
 	public String name = "";
 	public AstNodeType type = null;
@@ -372,7 +372,7 @@ class AstNodeProcDef : AstNodeStmt
 	}
 }
 
-class AstNodeReturn : AstNodeStmt
+public class AstNodeReturn : AstNodeStmt
 {
 	public AstNodeExpr value = null;
 
@@ -382,7 +382,7 @@ class AstNodeReturn : AstNodeStmt
 	}
 }
 
-class AstNodeIf : AstNodeStmt
+public class AstNodeIf : AstNodeStmt
 {
 	public AstNodeExpr cond = null;
 	public AstNodeStmt branch_true = null;
@@ -394,7 +394,7 @@ class AstNodeIf : AstNodeStmt
 	}
 }
 
-class AstNodeLoop : AstNodeStmt
+public class AstNodeLoop : AstNodeStmt
 {
 	public AstNodeStmt init = null;
 	public AstNodeExpr cond = null;
@@ -407,7 +407,7 @@ class AstNodeLoop : AstNodeStmt
 	}
 }
 
-class AstNodeBreak : AstNodeStmt
+public class AstNodeBreak : AstNodeStmt
 {
 	public AstNodeBreak(AstNode parent)
 		:base(AstCategory.BREAK, parent)
@@ -415,7 +415,7 @@ class AstNodeBreak : AstNodeStmt
 	}
 }
 
-class AstNodeContinue : AstNodeStmt
+public class AstNodeContinue : AstNodeStmt
 {
 	public AstNodeContinue(AstNode parent)
 		: base(AstCategory.CONTINUE, parent)
@@ -423,7 +423,7 @@ class AstNodeContinue : AstNodeStmt
 	}
 }
 
-class AstNodeBlock : AstNodeStmt
+public class AstNodeBlock : AstNodeStmt
 {
 	public List<AstNodeStmt> stmts = new List<AstNodeStmt>();
 
@@ -433,7 +433,7 @@ class AstNodeBlock : AstNodeStmt
 	}
 }
 
-class AstNodeAssign : AstNodeStmt
+public class AstNodeAssign : AstNodeStmt
 {
 	public AstNodeExpr left = null;
 	public AstNodeExpr right = null;
@@ -444,7 +444,7 @@ class AstNodeAssign : AstNodeStmt
 	}
 }
 
-class AstNodeInvoke : AstNodeStmt
+public class AstNodeInvoke : AstNodeStmt
 {
 	public AstNodeFuncRef expr = null;
 
