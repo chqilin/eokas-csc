@@ -36,6 +36,9 @@ public class Command
 	{
 		this.name = name;
 		this.info = info;
+		this.options = new Dictionary<string, Option>();
+		this.func = null;
+		this.subCommands = new Dictionary<string, Command>();
 	}
 		
 	public Command Option(String name, String info, String defaultValue)
@@ -144,14 +147,16 @@ public class Command
 				for (int i = 0; i < fragments.Length; i++)
 				{
 					var frag = fragments[i];
-					if (!args.Contains(frag))
+
+					int index = Array.FindIndex(args, (arg) => arg == frag);
+					if (index < 0 || index >= args.Length)
 						continue;
 
-					int next = i + 1;
+					int next = index + 1;
 
-					opt.Value.value = next == fragments.Length || fragments[next].StartsWith("-")
+					opt.Value.value = next == args.Length || args[next].StartsWith("-")
 						? "true"
-						: fragments[next];
+						: args[next];
 					
 					isArgumentsConsumedByOptions = true;
 				}
