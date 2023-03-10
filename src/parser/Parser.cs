@@ -10,6 +10,7 @@ public class Parser
 	{
 		this.Clear();
 		this.lexer.Ready(source);
+		this.NextToken();
 		return this.ParseModule();
 	}
 
@@ -21,17 +22,19 @@ public class Parser
 
 	AstNodeModule ParseModule()
 	{
-		if (!this.CheckToken(Token.Type.MODULE, true))
-			return null;
-
 		var module = new AstNodeModule(null);
 		module.entry = new AstNodeFuncDef(module);
 
-		this.NextToken();
+		while (this.CheckToken(Token.Type.USING, false, false))
+		{
+			var usingNode = this.ParseUsing(module);
+			module.imports.Add(usingNode.name, usingNode);
+		}
+		
 		while (this.token.type != Token.Type.EOS)
 		{
-			// TODO: import
 			// TODO: export
+			
 			AstNodeStmt stmt = this.ParseStmt(module.entry);
 			if (stmt == null)
 				return null;
@@ -43,7 +46,27 @@ public class Parser
 
 	AstNodeUsing ParseUsing(AstNode p)
 	{
-		return null;
+		if (!this.CheckToken(Token.Type.USING))
+			return null;
+
+		AstNodeUsing node = new AstNodeUsing(p);
+
+		if (!this.CheckToken(Token.Type.ID, true, false))
+			return null;
+		
+		node.name = this.token.value;
+		this.NextToken();
+
+		if (!this.CheckToken(Token.Type.COLON))
+			return null;
+
+		var path = this.ParseLiteralString(p) as AstNodeLiteralString;
+		if (path == null)
+			return null;
+
+		node.path = path.value;
+		
+		return node;
 	}
 
 	/**
@@ -1328,7 +1351,7 @@ public class Parser
 		}
 		else
 		{
-			this.Error("unexpected token '%s'", value);
+			this.Error("unexpected token '{0}'", value);
 		}
 	}
 }

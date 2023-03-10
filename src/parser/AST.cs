@@ -81,6 +81,7 @@ public class AstNodeModule : AstNode
 public class AstNodeUsing : AstNode
 {
 	public String name = "";
+	public String path = "";
 
 	public AstNodeUsing(AstNode parent)
 		: base(AstCategory.USING, parent)
