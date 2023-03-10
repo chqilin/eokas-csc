@@ -483,7 +483,7 @@ public class Lexer
 	
 	void SaveChar(char c)
 	{
-		this.token.value.Append(c);
+		this.mToken.value += c;
 	}
 	
 	void SaveAndReadChar()
