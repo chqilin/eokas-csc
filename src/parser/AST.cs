@@ -69,8 +69,8 @@ public class AstNode
 public class AstNodeModule : AstNode
 {
 	public String name = "";
-	public Dictionary<String, AstNodeUsing> imports = new Dictionary<string, AstNodeUsing>();
-	public Dictionary<String, AstNodeSymbolDef> exports = new Dictionary<string, AstNodeSymbolDef>();
+	public Dictionary<String, AstNodeUsing> usings = new Dictionary<string, AstNodeUsing>();
+	public Dictionary<String, AstNodeSymbolDef> symbols = new Dictionary<string, AstNodeSymbolDef>();
 
 	public AstNodeModule(AstNode parent)
 		: base(AstCategory.MODULE, parent)
@@ -166,7 +166,8 @@ public class AstNodeSymbolDef : AstNodeStmt
 	public String name = "";
 	public AstNodeType type = null;
 	public AstNodeExpr value = null;
-	public bool variable = false;
+	public bool isPublic = false;
+	public bool isVariable = false;
 
 	public AstNodeSymbolDef(AstNode parent)
 		:base(AstCategory.SYMBOL_DEF, parent)

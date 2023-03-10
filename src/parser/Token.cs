@@ -6,7 +6,7 @@ public struct Token
 {
     public enum Type
     {
-        USING,
+        USING, PUBLIC,
         VAR, VAL, MAKE,
         FUNC, PROC, STRUCT, ENUM,
         IF, ELSE, LOOP,  BREAK, CONTINUE, RETURN, TRUE, FALSE,
@@ -22,7 +22,7 @@ public struct Token
     
     public static string[] names = new string[(int)Type.COUNT]
     {
-        "using",
+        "using", "public",
         "var", "val", "make",
         "func", "proc", "struct", "enum",
         "if", "else", "loop", "break", "continue", "return", "true", "false",

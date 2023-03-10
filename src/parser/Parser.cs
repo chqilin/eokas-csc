@@ -30,7 +30,7 @@ public class Parser
 			var usingDef = this.ParseUsing(module);
 			if (usingDef == null)
 				return null;
-			module.imports.Add(usingDef.name, usingDef);
+			module.usings.Add(usingDef.name, usingDef);
 		}
 		
 		// exports
@@ -39,7 +39,7 @@ public class Parser
 			var symbolDef = this.ParseStmtSymbolDef(module);
 			if (symbolDef == null)
 				return null;
-			module.exports.Add(symbolDef.name, symbolDef);
+			module.symbols.Add(symbolDef.name, symbolDef);
 		}
 
 		return module;
@@ -942,14 +942,23 @@ public class Parser
 	*/
 	AstNodeSymbolDef ParseStmtSymbolDef(AstNode p)
 	{
-		if (!this.CheckToken(Token.Type.VAR, false, false) && !this.CheckToken(Token.Type.VAL, false, false))
+		bool isPublic = false;
+		if (p != null && (p.category == AstCategory.MODULE || p.category == AstCategory.STRUCT_DEF))
+		{
+			isPublic = this.CheckToken(Token.Type.PUBLIC, false);
+		}
+		
+		bool isVal = this.CheckToken(Token.Type.VAL, false);
+		bool isVar = this.CheckToken(Token.Type.VAR, false);
+		if (isVal == isVar)
 		{
 			this.ErrorTokenUnexpected();
 			return null;
 		}
 
 		var node = new AstNodeSymbolDef(p);
-		node.variable = this.token.type == Token.Type.VAR;
+		node.isPublic = isPublic;
+		node.isVariable = isVar;
 
 		this.NextToken(); // ignore 'var' | 'val'
 
