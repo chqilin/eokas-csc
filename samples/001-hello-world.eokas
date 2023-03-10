@@ -1,5 +1,5 @@
 
-using io : "eokas.io"
+using io : "eokas.io";
 
 public val main = func(args: array<string>): i32 {
     io.print("hello world.");

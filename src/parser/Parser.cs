@@ -66,6 +66,9 @@ public class Parser
 			return null;
 
 		node.path = path.value;
+
+		if (!this.CheckToken(Token.Type.SEMICOLON))
+			return null;
 		
 		return node;
 	}
@@ -959,9 +962,7 @@ public class Parser
 		var node = new AstNodeSymbolDef(p);
 		node.isPublic = isPublic;
 		node.isVariable = isVar;
-
-		this.NextToken(); // ignore 'var' | 'val'
-
+		
 		if (!this.CheckToken(Token.Type.ID, true, false))
 			return null;
 
