@@ -476,9 +476,16 @@ public class Lexer
 	
 	void ReadChar()
 	{
-		this.current = this.source[this.position];
-		this.position++;
-		this.column++;
+		if (this.position < this.source.Length)
+		{
+			this.current = this.source[this.position];
+			this.position++;
+			this.column++;
+		}
+		else
+		{
+			this.current = '\0';
+		}
 	}
 	
 	void SaveChar(char c)

@@ -70,12 +70,11 @@ public class AstNodeModule : AstNode
 {
 	public String name = "";
 	public Dictionary<String, AstNodeUsing> imports = new Dictionary<string, AstNodeUsing>();
-	public AstNodeFuncDef entry = null;
+	public Dictionary<String, AstNodeSymbolDef> exports = new Dictionary<string, AstNodeSymbolDef>();
 
 	public AstNodeModule(AstNode parent)
 		: base(AstCategory.MODULE, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeUsing : AstNode
@@ -85,8 +84,7 @@ public class AstNodeUsing : AstNode
 
 	public AstNodeUsing(AstNode parent)
 		: base(AstCategory.USING, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeType : AstNode
@@ -96,24 +94,21 @@ public class AstNodeType : AstNode
 
 	public AstNodeType(AstNode parent)
 		: base(AstCategory.TYPE, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeExpr : AstNode
 {
 	public AstNodeExpr(AstCategory category, AstNode parent)
 		: base(category, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeStmt : AstNode
 {
 	public AstNodeStmt(AstCategory category, AstNode parent)
 		: base(category, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeFuncDef : AstNodeExpr
@@ -130,8 +125,7 @@ public class AstNodeFuncDef : AstNodeExpr
 
 	public AstNodeFuncDef(AstNode parent)
 		:base(AstCategory.FUNC_DEF, parent)
-	{
-	}
+	{ }
 
 	public Arg? AddArg(String name)
 	{
@@ -164,8 +158,7 @@ public class AstNodeFuncRef : AstNodeExpr
 
 	public AstNodeFuncRef(AstNode parent)
 		:base(AstCategory.FUNC_REF, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeSymbolDef : AstNodeStmt
@@ -177,8 +170,7 @@ public class AstNodeSymbolDef : AstNodeStmt
 
 	public AstNodeSymbolDef(AstNode parent)
 		:base(AstCategory.SYMBOL_DEF, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeSymbolRef : AstNodeExpr
@@ -187,8 +179,7 @@ public class AstNodeSymbolRef : AstNodeExpr
 
 	public AstNodeSymbolRef(AstNode parent)
 		:base(AstCategory.SYMBOL_REF, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeExprTrinary : AstNodeExpr
@@ -198,9 +189,8 @@ public class AstNodeExprTrinary : AstNodeExpr
 	public AstNodeExpr branch_false = null;
 
 	public AstNodeExprTrinary(AstNode parent)
-		:base(AstCategory.EXPR_TRINARY, parent)
-	{
-	}
+		: base(AstCategory.EXPR_TRINARY, parent)
+	{ }
 }
 
 public class AstNodeExprBinary : AstNodeExpr
@@ -211,8 +201,7 @@ public class AstNodeExprBinary : AstNodeExpr
 
 	public AstNodeExprBinary(AstNode parent)
 		:base(AstCategory.EXPR_BINARY, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeExprUnary : AstNodeExpr
@@ -222,8 +211,7 @@ public class AstNodeExprUnary : AstNodeExpr
 
 	public AstNodeExprUnary(AstNode parent)
 		:base(AstCategory.EXPR_UNARY, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeLiteralInt : AstNodeExpr
@@ -232,8 +220,7 @@ public class AstNodeLiteralInt : AstNodeExpr
 
 	public AstNodeLiteralInt(AstNode parent)
 		:base(AstCategory.LITERAL_INT, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeLiteralFloat : AstNodeExpr
@@ -242,8 +229,7 @@ public class AstNodeLiteralFloat : AstNodeExpr
 
 	public AstNodeLiteralFloat(AstNode parent)
 		:base(AstCategory.LITERAL_FLOAT, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeLiteralBool : AstNodeExpr
@@ -252,8 +238,7 @@ public class AstNodeLiteralBool : AstNodeExpr
 
 	public AstNodeLiteralBool(AstNode parent)
 		:base(AstCategory.LITERAL_BOOL, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeLiteralString : AstNodeExpr
@@ -262,8 +247,7 @@ public class AstNodeLiteralString : AstNodeExpr
 
 	public AstNodeLiteralString(AstNode parent)
 		:base(AstCategory.LITERAL_STRING, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeArrayDef : AstNodeExpr
@@ -272,8 +256,7 @@ public class AstNodeArrayDef : AstNodeExpr
 
 	public AstNodeArrayDef(AstNode parent)
 		: base(AstCategory.ARRAY_DEF, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeArrayRef : AstNodeExpr
@@ -283,8 +266,7 @@ public class AstNodeArrayRef : AstNodeExpr
 
 	public AstNodeArrayRef(AstNode parent)
 		: base(AstCategory.ARRAY_REF, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeObjectDef : AstNodeExpr
@@ -294,8 +276,7 @@ public class AstNodeObjectDef : AstNodeExpr
 
 	public AstNodeObjectDef(AstNode parent)
 		: base(AstCategory.OBJECT_DEF, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeObjectRef : AstNodeExpr
@@ -305,8 +286,7 @@ public class AstNodeObjectRef : AstNodeExpr
 
 	public AstNodeObjectRef(AstNode parent)
 		: base(AstCategory.OBJECT_REF, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeStructDef : AstNodeStmt
@@ -324,8 +304,7 @@ public class AstNodeStructDef : AstNodeStmt
 
 	public AstNodeStructDef(AstNode parent)
 		: base(AstCategory.STRUCT_DEF, parent)
-	{
-	}
+	{ }
 
 	public Member AddMember(String name)
 	{
@@ -357,8 +336,7 @@ public class AstNodeEnumDef : AstNodeStmt
 
 	public AstNodeEnumDef(AstNode parent)
 		: base(AstCategory.ENUM_DEF, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeProcDef : AstNodeStmt
@@ -369,8 +347,7 @@ public class AstNodeProcDef : AstNodeStmt
 
 	public AstNodeProcDef(AstNode parent)
 		: base(AstCategory.PROC_DEF, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeReturn : AstNodeStmt
@@ -379,8 +356,7 @@ public class AstNodeReturn : AstNodeStmt
 
 	public AstNodeReturn(AstNode parent)
 		:base(AstCategory.RETURN, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeIf : AstNodeStmt
@@ -391,8 +367,7 @@ public class AstNodeIf : AstNodeStmt
 
 	public AstNodeIf(AstNode parent)
 		:base(AstCategory.IF, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeLoop : AstNodeStmt
@@ -404,24 +379,21 @@ public class AstNodeLoop : AstNodeStmt
 
 	public AstNodeLoop(AstNode parent)
 		:base(AstCategory.LOOP, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeBreak : AstNodeStmt
 {
 	public AstNodeBreak(AstNode parent)
 		:base(AstCategory.BREAK, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeContinue : AstNodeStmt
 {
 	public AstNodeContinue(AstNode parent)
 		: base(AstCategory.CONTINUE, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeBlock : AstNodeStmt
@@ -430,8 +402,7 @@ public class AstNodeBlock : AstNodeStmt
 
 	public AstNodeBlock(AstNode parent)
 		: base(AstCategory.BLOCK, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeAssign : AstNodeStmt
@@ -441,8 +412,7 @@ public class AstNodeAssign : AstNodeStmt
 
 	public AstNodeAssign(AstNode parent)
 		:base(AstCategory.ASSIGN, parent)
-	{
-	}
+	{ }
 }
 
 public class AstNodeInvoke : AstNodeStmt
@@ -451,6 +421,5 @@ public class AstNodeInvoke : AstNodeStmt
 
 	public AstNodeInvoke(AstNode parent)
 		: base(AstCategory.INVOKE, parent)
-	{
-	}
+	{ }
 }

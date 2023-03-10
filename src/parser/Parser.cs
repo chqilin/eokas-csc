@@ -23,22 +23,23 @@ public class Parser
 	AstNodeModule ParseModule()
 	{
 		var module = new AstNodeModule(null);
-		module.entry = new AstNodeFuncDef(module);
 
+		// using
 		while (this.CheckToken(Token.Type.USING, false, false))
 		{
-			var usingNode = this.ParseUsing(module);
-			module.imports.Add(usingNode.name, usingNode);
+			var usingDef = this.ParseUsing(module);
+			if (usingDef == null)
+				return null;
+			module.imports.Add(usingDef.name, usingDef);
 		}
 		
+		// exports
 		while (this.token.type != Token.Type.EOS)
 		{
-			// TODO: export
-			
-			AstNodeStmt stmt = this.ParseStmt(module.entry);
-			if (stmt == null)
+			var symbolDef = this.ParseStmtSymbolDef(module);
+			if (symbolDef == null)
 				return null;
-			module.entry.body.Add(stmt);
+			module.exports.Add(symbolDef.name, symbolDef);
 		}
 
 		return module;
@@ -943,6 +944,7 @@ public class Parser
 	{
 		if (!this.CheckToken(Token.Type.VAR, false, false) && !this.CheckToken(Token.Type.VAL, false, false))
 		{
+			this.ErrorTokenUnexpected();
 			return null;
 		}
 

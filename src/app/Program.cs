@@ -68,14 +68,11 @@ namespace Eokas
                 Console.WriteLine("ERROR: {0}", parser.error);
                 return;
             }
-
-            var writer = File.OpenWrite(string.Format("{0}.ll", fileName));
+            
             Console.WriteLine("=> Encode to IR:");
             Console.WriteLine("------------------------------------------");
             method(m);
             Console.WriteLine("------------------------------------------");
-            writer.Flush();
-            writer.Close();
         }
 
         static void About()
