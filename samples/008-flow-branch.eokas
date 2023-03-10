@@ -15,6 +15,7 @@ val main = func(args: array<string>): i32 {
         io.print("a == 5");
 
     if(a < 5)
+    {}
     else {
         io.print("a >= 5");
     }
