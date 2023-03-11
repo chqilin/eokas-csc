@@ -140,3 +140,18 @@ public class Scope
         }
     }
 }
+
+public class Module
+{
+    public string name { get; private set; }
+    public LLVMModuleRef handle { get; private set; }
+        
+    public Dictionary<string, LLVMValueRef> symbols = new Dictionary<string, LLVMValueRef>();
+    public  Dictionary<string, LLVMTypeRef> schemas = new Dictionary<string, LLVMTypeRef>();
+
+    public Module(string name)
+    {
+        this.name = name;
+        this.handle = LLVM.ModuleCreateWithName(name);
+    }
+}
