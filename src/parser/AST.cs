@@ -71,6 +71,7 @@ public class AstNodeModule : AstNode
 	public String name = "";
 	public Dictionary<String, AstNodeUsing> usings = new Dictionary<string, AstNodeUsing>();
 	public Dictionary<String, AstNodeSymbolDef> symbols = new Dictionary<string, AstNodeSymbolDef>();
+	public Dictionary<String, AstNodeType> types = new Dictionary<string, AstNodeType>();
 
 	public AstNodeModule(AstNode parent)
 		: base(AstCategory.MODULE, parent)
