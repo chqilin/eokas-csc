@@ -4,6 +4,13 @@ namespace Eokas;
 
 public class Model
 {
+    public static LLVMTypeRef TyVoid = LLVM.VoidType();
+    public static LLVMTypeRef TyI8 = LLVM.Int8Type();
+    public static LLVMTypeRef TyI16 = LLVM.Int16Type();
+    public static LLVMTypeRef TyI32 = LLVM.Int32Type();
+    public static LLVMTypeRef TyI64 = LLVM.Int64Type();
+    public static LLVMTypeRef TyBytePtr = LLVM.PointerType(LLVM.Int8Type(), 0);
+
     public static LLVMValueRef DeclareFunction(LLVMModuleRef module, String name, LLVMTypeRef ret, LLVMTypeRef[] args, bool varg)
     {
         var funcType = LLVM.FunctionType(ret, args, varg);
@@ -11,7 +18,7 @@ public class Model
         return funcValue;
     }
     
-    public static LLVMValueRef DefineFunction(LLVMModuleRef module, String name, LLVMTypeRef ret, LLVMTypeRef[] args, bool varg, System.Action<LLVMModuleRef, LLVMValueRef, LLVMBuilderRef> body)
+    public static LLVMValueRef DefineFunction(LLVMModuleRef module, String name, LLVMTypeRef ret, LLVMTypeRef[] args, bool varg, Action<LLVMModuleRef, LLVMValueRef, LLVMBuilderRef> body)
     {
         var funcType = LLVM.FunctionType(ret, args, varg);
         var funcValue = LLVM.AddFunction(module, name, funcType);

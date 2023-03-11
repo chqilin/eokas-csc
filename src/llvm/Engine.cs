@@ -1,5 +1,6 @@
 
 using System.Runtime.InteropServices;
+using Eokas.Modules;
 
 namespace Eokas;
 
@@ -7,32 +8,30 @@ using LLVMSharp;
 
 public class LLVMEngine
 {
-    public static bool JIT(AstNodeModule astModule)
+    public static bool JIT(AstNodeModule node)
     {
 	    LLVM.LinkInMCJIT();
         LLVM.InitializeX86TargetInfo();
         LLVM.InitializeX86Target();
         LLVM.InitializeX86TargetMC();
         
-        LLVMModuleRef module = LLVM.ModuleCreateWithName("eokas-main");
-        LLVMBuilderRef builder = LLVM.CreateBuilder();
+        var module = new Coder(node.name);
+        module.Encode(node);
         
-        LLVM.DumpModule(module);
+        module.Dump();
             
-        if (LLVM.CreateExecutionEngineForModule(out var engine, module, out var errorMessage).Value == 1)
+        if (LLVM.CreateExecutionEngineForModule(out var engine, module.handle, out var errorMessage).Value == 1)
         {
 	        Console.WriteLine(errorMessage);
 	        return false;
         }
         
         Console.WriteLine("---------------- JIT RUN ----------------");
-        var func = LLVM.GetNamedFunction(module, "main");
+        var func = LLVM.GetNamedFunction(module.handle, "@main");
         LLVMGenericValueRef[] args = new LLVMGenericValueRef[] { };
         LLVMGenericValueRef retval = LLVM.RunFunction(engine, func, args);
-        Console.WriteLine("RET: {0} \n", retval.Pointer);
+        Console.WriteLine("RET: {0} \n", LLVM.GenericValueToInt(retval, true));
         Console.WriteLine("---------------- JIT END ----------------");
-        
-        LLVM.DisposeModule(module);
         
         return true;
     }

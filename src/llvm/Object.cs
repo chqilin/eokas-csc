@@ -50,7 +50,7 @@ public class Scope
 
     public Scope AddChild(LLVMValueRef func)
     {
-        var child = new Scope(this, func.IsNull() ? this.func : func);
+        var child = new Scope(this, func.Pointer == IntPtr.Zero ? this.func : func);
         this.children.Add(child);
         return child;
     }
@@ -138,20 +138,5 @@ public class Scope
             this.schemas.TryGetValue(name, out schema);
             return schema;
         }
-    }
-}
-
-public class Module
-{
-    public string name { get; private set; }
-    public LLVMModuleRef handle { get; private set; }
-        
-    public Dictionary<string, LLVMValueRef> symbols = new Dictionary<string, LLVMValueRef>();
-    public  Dictionary<string, LLVMTypeRef> schemas = new Dictionary<string, LLVMTypeRef>();
-
-    public Module(string name)
-    {
-        this.name = name;
-        this.handle = LLVM.ModuleCreateWithName(name);
     }
 }
