@@ -9,6 +9,9 @@ public class Model
     public static LLVMTypeRef TyI16 = LLVM.Int16Type();
     public static LLVMTypeRef TyI32 = LLVM.Int32Type();
     public static LLVMTypeRef TyI64 = LLVM.Int64Type();
+    public static LLVMTypeRef TyF32 = LLVM.FloatType();
+    public static LLVMTypeRef TyF64 = LLVM.DoubleType();
+    public static LLVMTypeRef TyBool = LLVM.Int1Type();
     public static LLVMTypeRef TyBytePtr = LLVM.PointerType(LLVM.Int8Type(), 0);
 
     public static LLVMValueRef DeclareFunction(LLVMModuleRef module, String name, LLVMTypeRef ret, LLVMTypeRef[] args, bool varg)
