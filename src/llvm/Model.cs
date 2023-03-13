@@ -84,4 +84,11 @@ public class Model
 		
         return value;
     }
+
+    public static bool IsLastInstATerminator(LLVMBasicBlockRef bb)
+    {
+        var last = LLVM.GetLastInstruction(bb);
+        var isTerminator = LLVM.IsATerminatorInst(last);
+        return isTerminator.Pointer != IntPtr.Zero;
+    }
 }

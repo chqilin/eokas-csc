@@ -8,7 +8,10 @@ public class Coder : Module
 	private Scope scope;
 	private LLVMBuilderRef builder;
 
-	public string error { get; private set; };
+	private LLVMBasicBlockRef continuePoint;
+	private LLVMBasicBlockRef breakingPoint;
+
+	public string error { get; private set; }
 
 	public Coder(string name)
 		: base(name)
@@ -60,9 +63,8 @@ public class Coder : Module
 			}
 
 			// LastOp is Terminator?
-			var lastOp = LLVM.GetInsertBlock(this.builder).GetLastInstruction();
-			var isTerminator = lastOp.IsATerminatorInst();
-			if (isTerminator.Pointer == IntPtr.Zero)
+			var lastBlock = LLVM.GetInsertBlock(this.builder);
+			if(!Model.IsLastInstATerminator(lastBlock))
 			{
 				var retT = this.entry.TypeOf().GetReturnType();
 				if (retT.TypeKind == LLVMTypeKind.LLVMVoidTypeKind)
@@ -808,7 +810,7 @@ public class Coder : Module
 	LLVMValueRef EncodeExprString(AstNodeLiteralString node)
 	{
 		/* TODO: 
-		var str = module->string_make(this.scope->func, builder, node.value.cstr());
+		var str = module.string_make(this.scope.func, builder, node.value.cstr());
 		return str;
 		*/
 		return LLVM.ConstString(node.value, (uint)node.value.Length, true);
@@ -833,12 +835,12 @@ public class Coder : Module
 		// up-value-ref
 		{
 			var upvalStruct = this.upvals[this.func];
-			int index = upvalStruct->get_member_index(node.name);
+			int index = upvalStruct.get_member_index(node.name);
 			if(index < 0)
 			{
-				upvalStruct->add_member(node.name, symbol->type, symbol->value);
-				upvalStruct->resolve();
-				index = upvalStruct->get_member_index(node.name);
+				upvalStruct.add_member(node.name, symbol.type, symbol.value);
+				upvalStruct.resolve();
+				index = upvalStruct.get_member_index(node.name);
 			}
 			if(index < 0)
 			{
@@ -846,8 +848,8 @@ public class Coder : Module
 				return nullptr;
 			}
 			
-			var arg0 = this.func->getArg(0);
-			var ptr = builder.CreateConstGEP2_32(arg0.TypeOf()->getPointerElementType(), arg0, 0, index);
+			var arg0 = this.func.getArg(0);
+			var ptr = builder.CreateConstGEP2_32(arg0.TypeOf().getPointerElementType(), arg0, 0, index);
 			return ptr;
 		}
 		*/
@@ -909,8 +911,9 @@ public class Coder : Module
 				if (!this.EncodeStmt(stmt))
 					return default;
 			}
-			var lastOp = LLVM.GetInsertBlock(this.builder).GetLastInstruction();
-			if (LLVM.IsATerminatorInst(lastOp).Pointer == IntPtr.Zero)
+
+			var lastBlock = LLVM.GetInsertBlock(this.builder);
+			if(!Model.IsLastInstATerminator(lastBlock))
 			{
 				if(retType.IsVoidTy())
 					LLVM.BuildRetVoid(this.builder);
@@ -966,14 +969,14 @@ public class Coder : Module
 				/* TODO:
 				if (paramT.Pointer == Model.TyBytePtr.Pointer)
 				{
-					argV = module->cstr_from_value(scope->func, builder, argV);
+					argV = module.cstr_from_value(scope.func, builder, argV);
 				}
 
-				if (paramT == module->type_string_ptr)
+				if (paramT == module.type_string_ptr)
 				{
-					argV = module->string_from_value(scope->func, builder, argV);
+					argV = module.string_from_value(scope.func, builder, argV);
 				}
-				else if (!argV.TypeOf()->canLosslesslyBitCastTo(paramT))
+				else if (!argV.TypeOf().canLosslesslyBitCastTo(paramT))
 				{
 					this.Error("The type of param[%d] can't cast to the param type of function.\n", i);
 					return nullptr;
@@ -990,58 +993,64 @@ public class Coder : Module
 
 	LLVMValueRef EncodeExprArrayDef(AstNodeArrayDef node)
 	{
-		List<LLVMValueRef> arrayElements;
-		LLVMTypeRef arrayElementType = nullptr;
-		for (var element:
-		node.elements)
+		LLVMTypeRef arrayElementType = default;
+		List<LLVMValueRef> arrayElements = new List<LLVMValueRef>();
+		foreach (var element in node.elements)
 		{
 			var elementV = this.EncodeExpr(element);
-			if (elementV == nullptr)
-				return nullptr;
+			if (elementV.Pointer == IntPtr.Zero)
+				return default;
 			elementV = Model.GetValue(builder, elementV);
 
 			var elementT = elementV.TypeOf();
-			if (arrayElementType == nullptr)
+			if (arrayElementType.Pointer == IntPtr.Zero)
 			{
 				arrayElementType = elementT;
 			}
 
-			else if (arrayElementType != elementT)
+			else if (arrayElementType.Pointer != elementT.Pointer)
 			{
 				this.Error("The type of some elements is not same as others.\n");
-				return nullptr;
+				return default;
 			}
 
 			arrayElements.Add(elementV);
 		}
 
-		if (arrayElements.empty() || arrayElementType == nullptr)
-			arrayElementType = llvm::Type::getInt32Ty(context);
-
-		var arrayT = module->define_schema_array(arrayElementType);
-		var arrayP = module->make(func, builder, arrayT);
-		module->array_set(scope->func, builder, arrayP, arrayElements);
+		if (arrayElements.Count == 0)
+		{
+			this.Error("The elements of the array is empty.");
+			return default;
+		}
+		
+		/* TODO:
+		var arrayT = module.define_schema_array(arrayElementType);
+		var arrayP = module.make(func, builder, arrayT);
+		module.array_set(scope.func, builder, arrayP, arrayElements);
 
 		return arrayP;
+		*/
+		return default;
 	}
 
 	LLVMValueRef EncodeExprIndexRef(AstNodeArrayRef node)
 	{
 		var objV = this.EncodeExpr(node.obj);
 		var keyV = this.EncodeExpr(node.key);
-		if (objV == nullptr || keyV == nullptr)
-			return nullptr;
+		if (objV.Pointer == IntPtr.Zero || keyV.Pointer == IntPtr.Zero)
+			return default;
 
 		objV = Model.GetValue(builder, objV);
 		keyV = Model.GetValue(builder, keyV);
 		var objT = objV.TypeOf();
 		var keyT = keyV.TypeOf();
 
-		if (module->is_schema_array(objT))
+		/* TODO:
+		if (!module.is_schema_array(objT))
 		{
 			if (keyT.IsIntegerTy())
 			{
-				return module->array_get(scope->func, builder, objV, keyV);
+				return module.array_get(scope.func, builder, objV, keyV);
 			}
 			else
 			{
@@ -1049,38 +1058,40 @@ public class Coder : Module
 				return nullptr;
 			}
 		}
-		else if (objT == module->type_string_ptr)
+		else if (objT == module.type_string_ptr)
 		{
 			if (keyT.IsIntegerTy())
 			{
-				return module->string_get_char(scope->func, builder, objV, keyV);
+				return module.string_get_char(scope.func, builder, objV, keyV);
 			}
 			else
 			{
 				this.Error("The type of index is invalid.\n");
-				return nullptr;
+				return default;
 			}
 		}
 		else
 		{
 			this.Error("Index-Access is not defined on the object.\n");
-			return nullptr;
-		}
+			return default;
+		}*/
+		return default;
 	}
 
 	LLVMValueRef EncodeExprObjectDef(AstNodeObjectDef node)
 	{
 		var structType = this.EncodeType(node.type);
-		if (structType == nullptr)
-			return nullptr;
+		if (structType.Pointer == IntPtr.Zero)
+			return default;
 
-		var structInfo = module->get_struct(structType);
+		/*
+		var structInfo = module.get_struct(structType);
 		if (structInfo == nullptr)
 			return nullptr;
 
 		for (var objectMember: node.members)
 		{
-			var structMember = structInfo->get_member(objectMember.first);
+			var structMember = structInfo.get_member(objectMember.first);
 			if (structMember == nullptr)
 			{
 				this.Error("Object member '%s' is not defined in struct.\n", objectMember.first.cstr());
@@ -1090,40 +1101,43 @@ public class Coder : Module
 		}
 
 		// make object instance
-		LLVMValueRef instance = module->make(this.scope->func, builder, structType);
+		LLVMValueRef instance = module.make(this.scope.func, builder, structType);
 
-		for (u32_t index = 0; index < structInfo->members.size(); index++)
+		for (u32_t index = 0; index < structInfo.members.size(); index++)
 		{
-			var structMember = structInfo->members.at(index);
-			var objectMember = node.members.find(structMember->name);
+			var structMember = structInfo.members.at(index);
+			var objectMember = node.members.find(structMember.name);
 			LLVMValueRef memV = nullptr;
 			if (objectMember != node.members.end())
 			{
-				memV = this.EncodeExpr(objectMember->second);
+				memV = this.EncodeExpr(objectMember.second);
 				if (memV == nullptr)
 					return nullptr;
 				memV = Model.GetValue(builder, memV);
 			}
 			else
 			{
-				memV = structMember->value != nullptr
-					? structMember->value
-					: module->get_default_value(structMember->type);
+				memV = structMember.value != nullptr
+					? structMember.value
+					: module.get_default_value(structMember.type);
 			}
 
 			if (memV)
 			{
-				String memN = String::format("this.%s", structMember->name.cstr());
+				String memN = String::format("this.%s", structMember.name.cstr());
 				LLVMValueRef memP = builder.CreateStructGEP(structType, instance, index, memN.cstr());
 				builder.CreateStore(memV, memP);
 			}
 		}
 
 		return instance;
+		*/
+		return default;
 	}
 
 	LLVMValueRef EncodeExprObjectRef(AstNodeObjectRef node)
 	{
+		/* TODO:
 		var objV = this.EncodeExpr(node.obj);
 		var keyV = builder.CreateGlobalString(node.key.cstr());
 		if (objV == nullptr || keyV == nullptr)
@@ -1131,13 +1145,13 @@ public class Coder : Module
 
 		objV = Model.GetValue(builder, objV);
 		var objT = objV.TypeOf();
-		if (!(objT->isPointerTy() && objT->getPointerElementType()->isStructTy()))
+		if (!(objT.isPointerTy() && objT.getPointerElementType().isStructTy()))
 		{
 			this.Error("The value is not a object reference.\n");
 			return nullptr;
 		}
 
-		var structInfo = module->get_struct(objT->getPointerElementType());
+		var structInfo = module.get_struct(objT.getPointerElementType());
 		if (structInfo == nullptr)
 		{
 			this.Error("Can't find the type of this value.\n");
@@ -1145,16 +1159,18 @@ public class Coder : Module
 		}
 
 
-		var index = structInfo->get_member_index(node.key);
+		var index = structInfo.get_member_index(node.key);
 		if (index == -1)
 		{
 			this.Error("The object doesn't have a member named '%s'. \n", node.key.cstr());
 			return nullptr;
 		}
 
-		var structType = structInfo->type;
+		var structType = structInfo.type;
 		LLVMValueRef value = builder.CreateStructGEP(structType, objV, index);
 		return value;
+		*/
+		return default;
 	}
 
 	bool EncodeStmt(AstNodeStmt node)
@@ -1170,21 +1186,21 @@ public class Coder : Module
 			case AstCategory.SYMBOL_DEF:
 				return this.encode_stmt_symbol_def(dynamic_cast<ast_node_symbol_def_t*>(node));
 			case AstCategory.BREAK:
-				return this.encode_stmt_break(dynamic_cast<ast_node_break_t*>(node));
+				return this.EncodeStmtBreak(node as AstNodeBreak);
 			case AstCategory.CONTINUE:
-				return this.encode_stmt_continue(dynamic_cast<ast_node_continue_t*>(node));
+				return this.EncodeStmtContinue(node as AstNodeContinue);
 			case AstCategory.RETURN:
-				return this.encode_stmt_return(dynamic_cast<ast_node_return_t*>(node));
+				return this.EncodeStmtReturn(node as AstNodeReturn);
 			case AstCategory.IF:
-				return this.encode_stmt_if(dynamic_cast<ast_node_if_t*>(node));
+				return this.EncodeStmtIf(node as AstNodeIf);
 			case AstCategory.LOOP:
-				return this.encode_stmt_loop(dynamic_cast<ast_node_loop_t*>(node));
+				return this.EncodeStmtLoop(node as AstNodeLoop);
 			case AstCategory.BLOCK:
-				return this.encode_stmt_block(dynamic_cast<ast_node_block_t*>(node));
+				return this.EncodeStmtBlock(node as AstNodeBlock);
 			case AstCategory.ASSIGN:
-				return this.encode_stmt_assign(dynamic_cast<ast_node_assign_t*>(node));
+				return this.EncodeStmtAssign(node as AstNodeAssign);
 			case AstCategory.INVOKE:
-				return this.encode_stmt_invoke(dynamic_cast<ast_node_invoke_t*>(node));
+				return this.EncodeStmtInvoke(node as AstNodeInvoke);
 			default:
 				return false;
 		}
@@ -1194,13 +1210,13 @@ public class Coder : Module
 
 	bool encode_stmt_struct_def(ast_node_struct_def_t* node)
 	{
-		var thisInstanceInfo = module->new_struct(node.name);
+		var thisInstanceInfo = module.new_struct(node.name);
 
 		for ( const var 
 		&thisMember: node.members)
 		{
 			const String &memName = thisMember.name;
-			if (thisInstanceInfo->get_member(memName) != nullptr)
+			if (thisInstanceInfo.get_member(memName) != nullptr)
 			{
 				this.Error("The member named '%s' is already exists.\n", memName.cstr());
 				return false;
@@ -1213,16 +1229,16 @@ public class Coder : Module
 			var memValue = this.EncodeExpr(thisMember.value);
 			if (memValue == nullptr)
 			{
-				memValue = module->get_default_value(memType);
+				memValue = module.get_default_value(memType);
 			}
 
-			thisInstanceInfo->add_member(memName, memType, memValue);
+			thisInstanceInfo.add_member(memName, memType, memValue);
 		}
 
-		thisInstanceInfo->resolve();
-		if (!this.scope->addSchema(thisInstanceInfo->name, thisInstanceInfo->type))
+		thisInstanceInfo.resolve();
+		if (!this.scope.addSchema(thisInstanceInfo.name, thisInstanceInfo.type))
 		{
-			this.Error("There is a same schema named %s in this scope.\n", thisInstanceInfo->name.cstr());
+			this.Error("There is a same schema named %s in this scope.\n", thisInstanceInfo.name.cstr());
 			return false;
 		}
 
@@ -1233,53 +1249,53 @@ public class Coder : Module
 	{
 		const String name = node.name;
 
-		var thisInstanceInfo = module->new_struct(node.name);
-		thisInstanceInfo->add_member("value", module->type_i32);
-		thisInstanceInfo->resolve();
+		var thisInstanceInfo = module.new_struct(node.name);
+		thisInstanceInfo.add_member("value", module.type_i32);
+		thisInstanceInfo.resolve();
 
 		const String staticTypePrefix = "$_Static";
-		var thisStaticInfo = module->new_struct(staticTypePrefix + node.name);
+		var thisStaticInfo = module.new_struct(staticTypePrefix + node.name);
 		for ( const var 
 		&thisMember: node.members)
 		{
 			var memName = thisMember.first;
-			if (thisStaticInfo->get_member(memName) != nullptr)
+			if (thisStaticInfo.get_member(memName) != nullptr)
 			{
 				this.Error("The member named '%s' is already exists.\n", memName.cstr());
 				return false;
 			}
 
 			var v = builder.getInt32(thisMember.second);
-			var o = builder.CreateAlloca(thisInstanceInfo->type);
+			var o = builder.CreateAlloca(thisInstanceInfo.type);
 			var n = String::format("%s.%s", node.name.cstr(), memName.cstr());
 			var p = builder.CreateStructGEP(o, 0, n.cstr());
 			builder.CreateStore(v, p);
 			var memValue = o;
 
-			thisStaticInfo->add_member(memName, thisInstanceInfo->type, memValue);
+			thisStaticInfo.add_member(memName, thisInstanceInfo.type, memValue);
 		}
-		thisStaticInfo->resolve();
+		thisStaticInfo.resolve();
 
-		if (!this.scope->addSchema(thisStaticInfo->name, thisStaticInfo->type) ||
-		    !this.scope->addSchema(thisInstanceInfo->name, thisInstanceInfo->type))
+		if (!this.scope.addSchema(thisStaticInfo.name, thisStaticInfo.type) ||
+		    !this.scope.addSchema(thisInstanceInfo.name, thisInstanceInfo.type))
 		{
-			this.Error("There is a same schema named %s in this scope.\n", thisInstanceInfo->name.cstr());
+			this.Error("There is a same schema named %s in this scope.\n", thisInstanceInfo.name.cstr());
 			return false;
 		}
 
 		// make static object
-		LLVMValueRef staticV = module->make(this.scope->func, builder, thisStaticInfo->type);
-		for (u32_t index = 0; index < thisStaticInfo->members.size(); index++)
+		LLVMValueRef staticV = module.make(this.scope.func, builder, thisStaticInfo.type);
+		for (u32_t index = 0; index < thisStaticInfo.members.size(); index++)
 		{
-			var mem = thisStaticInfo->members.at(index);
-			var memV = builder.CreateLoad(mem->value);
+			var mem = thisStaticInfo.members.at(index);
+			var memV = builder.CreateLoad(mem.value);
 
-			String memN = String::format("%s.%s", name.cstr(), mem->name.cstr());
-			LLVMValueRef memP = builder.CreateStructGEP(thisStaticInfo->type, staticV, index, memN.cstr());
+			String memN = String::format("%s.%s", name.cstr(), mem.name.cstr());
+			LLVMValueRef memP = builder.CreateStructGEP(thisStaticInfo.type, staticV, index, memN.cstr());
 			builder.CreateStore(memV, memP);
 		}
 
-		if (!this.scope->addSymbol(name, staticV))
+		if (!this.scope.addSymbol(name, staticV))
 		{
 			this.Error("There is a same symbol named %s in this scope.\n", name.cstr());
 			return false;
@@ -1290,7 +1306,7 @@ public class Coder : Module
 
 	bool encode_stmt_proc_def(ast_node_proc_def_t* node)
 	{
-		if (this.scope->getSchema(node.name, false) != nullptr)
+		if (this.scope.getSchema(node.name, false) != nullptr)
 			return false;
 
 		var retType = this.EncodeType(node.type);
@@ -1306,14 +1322,14 @@ public class Coder : Module
 		}
 
 		llvm::FunctionType* procType = llvm::FunctionType::get(retType, argTypes, false);
-		this.scope->addSchema(node.name, procType->getPointerTo());
+		this.scope.addSchema(node.name, procType.getPointerTo());
 
 		return true;
 	}
 
 	bool encode_stmt_symbol_def(struct ast_node_symbol_def_t* node)
 	{
-		if (this.scope->getSymbol(node.name, false) != nullptr)
+		if (this.scope.getSymbol(node.name, false) != nullptr)
 		{
 			this.Error("The symbol '%s' is undefined.", node.name.cstr());
 			return false;
@@ -1335,9 +1351,9 @@ public class Coder : Module
 			{
 				if (stype == vtype)
 					break;
-				if (vtype->canLosslesslyBitCastTo(stype))
+				if (vtype.canLosslesslyBitCastTo(stype))
 					break;
-				if (vtype->isPointerTy() && vtype->getPointerElementType() == stype)
+				if (vtype.isPointerTy() && vtype.getPointerElementType() == stype)
 				{
 					stype = type = vtype;
 					break;
@@ -1354,7 +1370,7 @@ public class Coder : Module
 			stype = vtype;
 		}
 
-		if (stype->isVoidTy())
+		if (stype.isVoidTy())
 		{
 			this.Error("Void-Type can't assign to a symbol.\n");
 			return false;
@@ -1362,10 +1378,10 @@ public class Coder : Module
 
 		LLVMValueRef symbol = builder.CreateAlloca(stype);
 		builder.CreateStore(value, symbol);
-		symbol = llvm_model_t::ref_value(builder, symbol);
-		symbol->setName(node.name.cstr());
+		symbol = Model.RefValue(builder, symbol);
+		symbol.setName(node.name.cstr());
 
-		if (!scope->addSymbol(node.name, symbol))
+		if (!scope.addSymbol(node.name, symbol))
 		{
 			this.Error("There is a symbol named %s in this scope.\n", node.name.cstr());
 			return false;
@@ -1374,44 +1390,44 @@ public class Coder : Module
 		return true;
 	}
 
-	bool encode_stmt_break(struct ast_node_break_t* node)
+	bool EncodeStmtBreak(AstNodeBreak node)
 	{
-		if (this.breakPoint == nullptr)
+		if (this.breakingPoint.Pointer == IntPtr.Zero)
 			return false;
 
-		builder.CreateBr(this.breakPoint);
+		LLVM.BuildBr(this.builder, this.breakingPoint);
 
 		return true;
 	}
 
-	bool encode_stmt_continue(struct ast_node_continue_t* node)
+	bool EncodeStmtContinue(AstNodeContinue node)
 	{
-		if (this.continuePoint == nullptr)
+		if (this.continuePoint.Pointer == IntPtr.Zero)
 			return false;
 
-		builder.CreateBr(this.continuePoint);
+		LLVM.BuildBr(this.builder, this.continuePoint);
 
 		return true;
 	}
 
-	bool encode_stmt_return(struct ast_node_return_t* node)
+	bool EncodeStmtReturn(AstNodeReturn node)
 	{
-		var expectedRetType = this.scope->func->getFunctionType()->getReturnType();
+		var expectedRetType = LLVM.GetReturnType(this.scope.func.TypeOf());
 
-		if (node.value == nullptr)
+		if (node.value == null)
 		{
-			if (!expectedRetType->isVoidTy())
+			if (!expectedRetType.IsVoidTy())
 			{
 				this.Error("The function must return a value.\n");
 				return false;
 			}
-
-			builder.CreateRetVoid();
+			
+			LLVM.BuildRetVoid(this.builder);
 			return true;
 		}
 
 		var expr = this.EncodeExpr(node.value);
-		if (expr == nullptr)
+		if (expr.Pointer == IntPtr.Zero)
 		{
 			this.Error("Invalid ret value.\n");
 			return false;
@@ -1419,25 +1435,26 @@ public class Coder : Module
 
 		var value = Model.GetValue(builder, expr);
 		var actureRetType = value.TypeOf();
-		if (actureRetType != expectedRetType && !actureRetType->canLosslesslyBitCastTo(expectedRetType))
+		if (actureRetType.Pointer != expectedRetType.Pointer && 
+		    !actureRetType.CanLosslesslyBitCastTo(expectedRetType))
 		{
 			this.Error("The type of return value can't cast to return type of function.\n");
 			return false;
 		}
-
-		builder.CreateRet(value);
+		
+		LLVM.BuildRet(this.builder, value);
 
 		return true;
 	}
 
-	bool encode_stmt_if(struct ast_node_if_t* node)
+	bool EncodeStmtIf(AstNodeIf node)
 	{
-		llvm::BasicBlock* if_true = llvm::BasicBlock::Create(context, "if.true", this.scope->func);
-		llvm::BasicBlock* if_false = llvm::BasicBlock::Create(context, "if.false", this.scope->func);
-		llvm::BasicBlock* if_end = llvm::BasicBlock::Create(context, "if.end", this.scope->func);
+		var if_true = LLVM.AppendBasicBlock(this.scope.func, "if.true");
+		var if_false = LLVM.AppendBasicBlock(this.scope.func, "if.false");
+		var if_end = LLVM.AppendBasicBlock(this.scope.func, "if.end");
 
 		var condV = this.EncodeExpr(node.cond);
-		if (condV == nullptr)
+		if (condV.Pointer == IntPtr.Zero)
 			return false;
 		condV = Model.GetValue(builder, condV);
 		if (!condV.TypeOf().IsIntegerTy(1))
@@ -1446,70 +1463,70 @@ public class Coder : Module
 			return false;
 		}
 
-		builder.CreateCondBr(condV, if_true, if_false);
+		LLVM.BuildCondBr(this.builder, condV, if_true, if_false);
 
 		// if-true
-		builder.SetInsertPoint(if_true);
-		if (node.branch_true != nullptr)
+		LLVM.PositionBuilderAtEnd(this.builder, if_true);
+		if (node.branch_true != null)
 		{
 			if (!this.EncodeStmt(node.branch_true))
 				return false;
-			var lastBlock = builder.GetInsertBlock();
-			if (lastBlock != if_true && !lastBlock->back().isTerminator())
+			var lastBlock = LLVM.GetInsertBlock(this.builder);
+			if (lastBlock.Pointer != if_true.Pointer && !Model.IsLastInstATerminator(lastBlock))
 			{
-				builder.CreateBr(if_end);
+				LLVM.BuildBr(this.builder, if_end);
 			}
 		}
-
-		if (!if_true->back().isTerminator())
+		
+		if(!Model.IsLastInstATerminator(if_true))
 		{
-			builder.CreateBr(if_end);
+			LLVM.BuildBr(this.builder, if_end);
 		}
 
 		// if-false
-		builder.SetInsertPoint(if_false);
-		if (node.branch_false != nullptr)
+		LLVM.PositionBuilderAtEnd(this.builder, if_false);
+		if (node.branch_false != null)
 		{
 			if (!this.EncodeStmt(node.branch_false))
 				return false;
-			var lastBlock = builder.GetInsertBlock();
-			if (lastBlock != if_false && !lastBlock->back().isTerminator())
+			var lastBlock = LLVM.GetInsertBlock(this.builder);
+			if (lastBlock.Pointer != if_false.Pointer && !Model.IsLastInstATerminator(lastBlock))
 			{
-				builder.CreateBr(if_end);
+				LLVM.BuildBr(this.builder, if_end);
 			}
 		}
-
-		if (!if_false->back().isTerminator())
+		
+		if(!Model.IsLastInstATerminator(if_false))
 		{
-			builder.CreateBr(if_end);
+			LLVM.BuildBr(this.builder, if_end);
 		}
 
-		builder.SetInsertPoint(if_end);
+		LLVM.PositionBuilderAtEnd(this.builder, if_end);
 
 		return true;
 	}
 
-	bool encode_stmt_loop(struct ast_node_loop_t* node)
+	bool EncodeStmtLoop(AstNodeLoop node)
 	{
-		this.PushScope();
+		this.PushScope(this.scope.func);
 
-		llvm::BasicBlock* loop_cond = llvm::BasicBlock::Create(context, "loop.cond", this.scope->func);
-		llvm::BasicBlock* loop_step = llvm::BasicBlock::Create(context, "loop.step", this.scope->func);
-		llvm::BasicBlock* loop_body = llvm::BasicBlock::Create(context, "loop.body", this.scope->func);
-		llvm::BasicBlock* loop_end = llvm::BasicBlock::Create(context, "loop.end", this.scope->func);
+		var loop_cond = LLVM.AppendBasicBlock(this.scope.func, "loop.cond");
+		var loop_step = LLVM.AppendBasicBlock(this.scope.func, "loop.step");
+		var loop_body = LLVM.AppendBasicBlock(this.scope.func, "loop.body");
+		var loop_end = LLVM.AppendBasicBlock(this.scope.func, "loop.end");
 
 		var oldContinuePoint = this.continuePoint;
-		var oldBreakPoint = this.breakPoint;
+		var oldBreakingPoint = this.breakingPoint;
 		this.continuePoint = loop_step;
-		this.breakPoint = loop_end;
+		this.breakingPoint = loop_end;
 
 		if (!this.EncodeStmt(node.init))
 			return false;
-		builder.CreateBr(loop_cond);
+		LLVM.BuildBr(this.builder, loop_cond);
 
-		builder.SetInsertPoint(loop_cond);
+		LLVM.PositionBuilderAtEnd(this.builder, loop_cond);
 		var condV = this.EncodeExpr(node.cond);
-		if (condV == nullptr)
+		if (condV.Pointer == IntPtr.Zero)
 			return false;
 		condV = Model.GetValue(builder, condV);
 		if (!condV.TypeOf().IsIntegerTy(1))
@@ -1518,45 +1535,45 @@ public class Coder : Module
 			return false;
 		}
 
-		builder.CreateCondBr(condV, loop_body, loop_end);
+		LLVM.BuildCondBr(this.builder, condV, loop_body, loop_end);
 
-		builder.SetInsertPoint(loop_body);
-		if (node.body != nullptr)
+		LLVM.PositionBuilderAtEnd(this.builder, loop_body);
+		if (node.body != null)
 		{
 			if (!this.EncodeStmt(node.body))
 				return false;
-			var lastOp = loop_body->back();
-			if (!lastOp.isTerminator())
+			if (!Model.IsLastInstATerminator(loop_body))
 			{
-				builder.CreateBr(loop_step);
+				LLVM.BuildBr(this.builder, loop_step);
+				
 			}
 		}
-
-		if (!loop_body->back().isTerminator())
+		
+		if(!Model.IsLastInstATerminator(loop_body))
 		{
-			builder.CreateBr(loop_step);
+			LLVM.BuildBr(this.builder, loop_step);
 		}
 
-		builder.SetInsertPoint(loop_step);
+		LLVM.PositionBuilderAtEnd(this.builder, loop_step);
 		if (!this.EncodeStmt(node.step))
 			return false;
-		builder.CreateBr(loop_cond);
+		LLVM.BuildBr(this.builder, loop_cond);
 
-		builder.SetInsertPoint(loop_end);
+		LLVM.PositionBuilderAtEnd(this.builder, loop_end);
 
 		this.continuePoint = oldContinuePoint;
-		this.breakPoint = oldBreakPoint;
+		this.breakingPoint = oldBreakingPoint;
 
 		this.PopScope();
 
 		return true;
 	}
 
-	bool encode_stmt_block(struct ast_node_block_t* node)
+	bool EncodeStmtBlock(AstNodeBlock node)
 	{
-		this.PushScope();
+		this.PushScope(this.scope.func);
 
-		for (var stmt: node.stmts)
+		foreach (var stmt in node.stmts)
 		{
 			if (!this.EncodeStmt(stmt))
 				return false;
@@ -1567,21 +1584,21 @@ public class Coder : Module
 		return true;
 	}
 
-	bool encode_stmt_assign(struct ast_node_assign_t* node)
+	bool EncodeStmtAssign(AstNodeAssign node)
 	{
 		var left = this.EncodeExpr(node.left);
 		var right = this.EncodeExpr(node.right);
-		if (left == nullptr || right == nullptr)
+		if (left.Pointer == IntPtr.Zero || right.Pointer == IntPtr.Zero)
 			return false;
 
-		var ptr = llvm_model_t::ref_value(builder, left);
+		var ptr = Model.RefValue(builder, left);
 		var val = Model.GetValue(builder, right);
-		builder.CreateStore(val, ptr);
+		LLVM.BuildStore(this.builder, val, ptr);
 
 		return true;
 	}
 
-	bool encode_stmt_invoke(AstNodeInvoke node)
+	bool EncodeStmtInvoke(AstNodeInvoke node)
 	{
 		var expr = this.EncodeExprFuncRef(node.expr as AstNodeFuncRef);
 		return expr.Pointer != IntPtr.Zero;

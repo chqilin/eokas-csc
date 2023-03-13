@@ -22,7 +22,8 @@ public static class LLVMExtensions
 
     public static bool IsFloatingPointTy(this LLVMTypeRef type)
     {
-        return type.TypeKind == LLVMTypeKind.LLVMFloatTypeKind;
+        return type.TypeKind == LLVMTypeKind.LLVMFloatTypeKind ||
+               type.TypeKind == LLVMTypeKind.LLVMDoubleTypeKind;
     }
 
     public static bool IsPointerTy(this LLVMTypeRef type)
@@ -43,6 +44,38 @@ public static class LLVMExtensions
     public static bool IsArrayTy(this LLVMTypeRef type)
     {
         return type.TypeKind == LLVMTypeKind.LLVMArrayTypeKind;
+    }
+
+    public static bool CanLosslesslyBitCastTo(this LLVMTypeRef type, LLVMTypeRef target)
+    {
+        if (type.TypeKind == LLVMTypeKind.LLVMIntegerTypeKind)
+        {
+            if (target.TypeKind == LLVMTypeKind.LLVMIntegerTypeKind)
+                return type.GetIntTypeWidth() <= target.GetIntTypeWidth();
+
+            if (target.TypeKind == LLVMTypeKind.LLVMFloatTypeKind)
+                return type.GetIntTypeWidth() <= 32;
+
+            if (target.TypeKind == LLVMTypeKind.LLVMDoubleTypeKind)
+                return true;
+        }
+
+        if (type.TypeKind == LLVMTypeKind.LLVMFloatTypeKind)
+        {
+            return target.IsFloatingPointTy();
+        }
+
+        if (type.TypeKind == LLVMTypeKind.LLVMDoubleTypeKind)
+        {
+            return target.TypeKind == LLVMTypeKind.LLVMDoubleTypeKind;
+        }
+
+        if (type.TypeKind == LLVMTypeKind.LLVMPointerTypeKind)
+        {
+            return target.TypeKind == LLVMTypeKind.LLVMPointerTypeKind;
+        }
+
+        return false;
     }
 
     public static LLVMTypeRef GetPointerTo(this LLVMTypeRef type)
