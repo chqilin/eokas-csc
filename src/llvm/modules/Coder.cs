@@ -155,19 +155,19 @@ public class Coder : Module
 			case AstCategory.LITERAL_STRING:
 				return this.EncodeExprString(node as AstNodeLiteralString);
 			case AstCategory.SYMBOL_REF:
-				return this.EncodeExpr_symbol_ref(dynamic_cast<ast_node_symbol_ref_t*>(node));
+				return this.EncodeExprSymbolRef(node as AstNodeSymbolRef);
 			case AstCategory.FUNC_DEF:
-				return this.EncodeExpr_func_def(dynamic_cast<ast_node_func_def_t*>(node));
+				return this.EncodeExprFuncDef(node as AstNodeFuncDef);
 			case AstCategory.FUNC_REF:
-				return this.EncodeExpr_func_ref(dynamic_cast<ast_node_func_ref_t*>(node));
+				return this.EncodeExprFuncRef(node as AstNodeFuncRef);
 			case AstCategory.ARRAY_DEF:
-				return this.EncodeExpr_array_def(dynamic_cast<ast_node_array_def_t*>(node));
+				return this.EncodeExprArrayDef(node as AstNodeArrayDef);
 			case AstCategory.ARRAY_REF:
-				return this.EncodeExpr_index_ref(dynamic_cast<ast_node_array_ref_t*>(node));
+				return this.EncodeExprIndexRef(node as AstNodeArrayRef);
 			case AstCategory.OBJECT_DEF:
-				return this.EncodeExpr_object_def(dynamic_cast<ast_node_object_def_t*>(node));
+				return this.EncodeExprObjectDef(node as AstNodeObjectDef);
 			case AstCategory.OBJECT_REF:
-				return this.EncodeExpr_object_ref(dynamic_cast<ast_node_object_ref_t*>(node));
+				return this.EncodeExprObjectRef(node as AstNodeObjectRef);
 			default:
 				return default;
 		}
@@ -807,27 +807,26 @@ public class Coder : Module
 
 	LLVMValueRef EncodeExprString(AstNodeLiteralString node)
 	{
+		/* TODO: 
 		var str = module->string_make(this.scope->func, builder, node.value.cstr());
 		return str;
-		//return LLVM.ConstString(node.value, (uint)node.value.Length, true);
+		*/
+		return LLVM.ConstString(node.value, (uint)node.value.Length, true);
 	}
 
-	LLVMValueRef EncodeExpr_symbol_ref(ast_node_symbol_ref_t* node)
+	LLVMValueRef EncodeExprSymbolRef(AstNodeSymbolRef node)
 	{
-		if (node == nullptr)
-			return nullptr;
-
-		var* symbol = this.scope->getSymbol(node.name, true);
-		if (symbol == nullptr)
+		var symbol = this.scope.GetSymbol(node.name, true);
+		if (symbol == null)
 		{
-			this.Error("Symbol '%s' is undefined.\n", node.name.cstr());
-			return nullptr;
+			this.ErrorSymbolIsUndefined( node.name);
+			return default;
 		}
 
 		// local-value-ref
-		if (symbol->scope->func == this.func)
+		if (symbol.scope.func.Pointer == this.scope.func.Pointer)
 		{
-			return symbol->value;
+			return symbol.value;
 		}
 
 		/*
@@ -853,125 +852,119 @@ public class Coder : Module
 		}
 		*/
 
-		return symbol->value;
+		return symbol.value;
 	}
 
-	LLVMValueRef EncodeExpr_func_def(ast_node_func_def_t* node)
+	LLVMValueRef EncodeExprFuncDef(AstNodeFuncDef node)
 	{
-		if (node == nullptr)
-			return nullptr;
+		var retType = this.EncodeType(node.rtype);
+		if (retType.Pointer == IntPtr.Zero)
+			return default;
 
-		var* retType = this.encode_type(node.rtype);
-		if (retType == nullptr)
-			return nullptr;
-
-		std::vector<llvm::Type*> argTypes;
-		for (var arg: node.args)
+		var argTypes = new List<LLVMTypeRef>();
+		foreach (var arg in node.args)
 		{
-			var* argType = this.encode_type(arg.type);
-			if (argType == nullptr)
-				return nullptr;
-			if (argType->isFunctionTy() || argType->isStructTy() || argType->isArrayTy())
-				argTypes.push_back(argType->getPointerTo());
+			var argType = this.EncodeType(arg.type);
+			if (argType.Pointer == IntPtr.Zero)
+				return default;
+			if (argType.IsFunctionTy() || argType.IsStructTy() || argType.IsArrayTy())
+				argTypes.Add(argType.GetPointerTo());
 			else
-				argTypes.push_back(argType);
+				argTypes.Add(argType);
 		}
-
-		llvm::FunctionType* funcType = llvm::FunctionType::get(retType, argTypes, false);
-		llvm::Function* funcPtr = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, "", module->module);
-
-		var oldFunc = this.func;
-		var oldIB = builder.GetInsertBlock();
-
-		this.func = funcPtr;
-
+		
+		var funcType = LLVM.FunctionType(retType, argTypes.ToArray(), false);
+		var funcPtr = LLVM.AddFunction(this.handle, "", funcType);
+		
+		var oldFunc = this.scope.func;
+		var oldIB = LLVM.GetInsertBlock(this.builder);
+		
 		this.PushScope(funcPtr);
 		{
-			llvm::BasicBlock* entry = llvm::BasicBlock::Create(context, "entry", funcPtr);
-			builder.SetInsertPoint(entry);
+			var entry = LLVM.AppendBasicBlock(funcPtr, "entry");
+			LLVM.PositionBuilderAtEnd(this.builder, entry);
 
 			// self
 			var self = funcPtr;
-			this.scope->addSymbol("self", self);
+			this.scope.AddSymbol("self", self);
 
 			// args
-			for (size_t index = 0; index < node.args.size(); index++)
+			for (uint index = 0; index < node.args.Count; index++)
 			{
-				const char* name = node.args.at(index).name.cstr();
-				var arg = funcPtr->getArg(index + 1);
-				arg->setName(name);
+				var argNode = node.args[(int)index];
+				var argVal = LLVM.GetParam(funcPtr, index + 1);
 
-				if (!this.scope->addSymbol(name, arg))
+				argVal.SetValueName(argNode.name);
+
+				if (!this.scope.AddSymbol(name, argVal))
 				{
-					this.Error("The symbol name '%s' is already existed.\n", name);
-					return nullptr;
+					this.ErrorSymbolIsAlreadyDefined(name);
+					return default;
 				}
 			}
 
 			// body
-			for (var stmt: node.body)
+			foreach (var stmt in node.body)
 			{
 				if (!this.EncodeStmt(stmt))
-					return nullptr;
+					return default;
 			}
-			var lastOp = builder.GetInsertBlock()->back();
-			if (!lastOp.isTerminator())
+			var lastOp = LLVM.GetInsertBlock(this.builder).GetLastInstruction();
+			if (LLVM.IsATerminatorInst(lastOp).Pointer == IntPtr.Zero)
 			{
-				if (funcPtr->getReturnType()->isVoidTy())
-					builder.CreateRetVoid();
+				if(retType.IsVoidTy())
+					LLVM.BuildRetVoid(this.builder);
 				else
-					builder.CreateRet(module->get_default_value(retType));
+					LLVM.BuildRet(this.builder, Model.GetDefaultValue(retType));
 			}
 		}
 		this.PopScope();
-
-		this.func = oldFunc;
-		builder.SetInsertPoint(oldIB);
+		
+		LLVM.PositionBuilderAtEnd(this.builder, oldIB);
 
 		return funcPtr;
 	}
 
-	LLVMValueRef EncodeExpr_func_ref(ast_node_func_ref_t* node)
+	LLVMValueRef EncodeExprFuncRef(AstNodeFuncRef node)
 	{
-		if (node == nullptr)
-			return nullptr;
-
 		LLVMValueRef funcExpr = this.EncodeExpr(node.func);
-		if (funcExpr == nullptr)
+		if (funcExpr.Pointer == IntPtr.Zero)
 		{
-			this.Error("The function is undefined.\n");
-			return nullptr;
+			this.Error("The function is undefined.");
+			return default;
 		}
 
 		var funcPtr = Model.GetValue(builder, funcExpr);
-		llvm::FunctionType* funcType = nullptr;
-		if (funcPtr.TypeOf()->isFunctionTy())
+		var funcType = funcPtr.TypeOf();
+		if (funcType.IsFunctionTy())
 		{
-			funcType = llvm::cast<llvm::FunctionType>(funcPtr.TypeOf());
+			// do nothing.
 		}
-		else if (funcPtr.TypeOf()->isPointerTy() && funcPtr.TypeOf()->getPointerElementType()->isFunctionTy())
+		else if (funcType.IsPointerTy() && funcType.GetPointerElementType().IsFunctionTy())
 		{
-			funcType = llvm::cast<llvm::FunctionType>(funcPtr.TypeOf()->getPointerElementType());
+			funcType = funcType.GetPointerElementType();
 		}
 		else
 		{
 			this.Error("Invalid function type.\n");
-			return nullptr;
+			return default;
 		}
 
-		std::vector<LLVMValueRef> args;
-		for (var i = 0; i < node.args.size(); i++)
+		var paramTypes = funcType.GetParamTypes();
+		List<LLVMValueRef> args = new List<LLVMValueRef>();
+		for (var i = 0; i < node.args.Count; i++)
 		{
-			var* paramT = funcType->getParamType(i);
-			var* argV = this.EncodeExpr(node.args.at(i));
-			if (argV == nullptr)
-				return nullptr;
+			var paramT = paramTypes[i];
+			var argV = this.EncodeExpr(node.args[i]);
+			if (argV.Pointer == IntPtr.Zero)
+				return default;
 
 			argV = Model.GetValue(builder, argV);
-
-			if (paramT != argV.TypeOf())
+			
+			if (paramT.Pointer != argV.TypeOf().Pointer)
 			{
-				if (paramT == module->type_cstr)
+				/* TODO:
+				if (paramT.Pointer == Model.TyBytePtr.Pointer)
 				{
 					argV = module->cstr_from_value(scope->func, builder, argV);
 				}
@@ -985,22 +978,20 @@ public class Coder : Module
 					this.Error("The type of param[%d] can't cast to the param type of function.\n", i);
 					return nullptr;
 				}
+				*/
 			}
 
-			args.push_back(argV);
+			args.Add(argV);
 		}
-
-		LLVMValueRef retval = builder.CreateCall(funcType, funcPtr, args);
-		return retval;
+		
+		var retVal = LLVM.BuildCall(this.builder, funcPtr, args.ToArray(), "");
+		return retVal;
 	}
 
-	LLVMValueRef EncodeExpr_array_def(ast_node_array_def_t* node)
+	LLVMValueRef EncodeExprArrayDef(AstNodeArrayDef node)
 	{
-		if (node == nullptr)
-			return nullptr;
-
-		std::vector<LLVMValueRef> arrayElements;
-		llvm::Type* arrayElementType = nullptr;
+		List<LLVMValueRef> arrayElements;
+		LLVMTypeRef arrayElementType = nullptr;
 		for (var element:
 		node.elements)
 		{
@@ -1021,7 +1012,7 @@ public class Coder : Module
 				return nullptr;
 			}
 
-			arrayElements.push_back(elementV);
+			arrayElements.Add(elementV);
 		}
 
 		if (arrayElements.empty() || arrayElementType == nullptr)
@@ -1034,11 +1025,8 @@ public class Coder : Module
 		return arrayP;
 	}
 
-	LLVMValueRef EncodeExpr_index_ref(ast_node_array_ref_t* node)
+	LLVMValueRef EncodeExprIndexRef(AstNodeArrayRef node)
 	{
-		if (node == nullptr)
-			return nullptr;
-
 		var objV = this.EncodeExpr(node.obj);
 		var keyV = this.EncodeExpr(node.key);
 		if (objV == nullptr || keyV == nullptr)
@@ -1080,16 +1068,13 @@ public class Coder : Module
 		}
 	}
 
-	LLVMValueRef EncodeExpr_object_def(ast_node_object_def_t* node)
+	LLVMValueRef EncodeExprObjectDef(AstNodeObjectDef node)
 	{
-		if (node == nullptr)
-			return nullptr;
-
-		var* structType = this.encode_type(node.type);
+		var structType = this.EncodeType(node.type);
 		if (structType == nullptr)
 			return nullptr;
 
-		var* structInfo = module->get_struct(structType);
+		var structInfo = module->get_struct(structType);
 		if (structInfo == nullptr)
 			return nullptr;
 
@@ -1137,11 +1122,8 @@ public class Coder : Module
 		return instance;
 	}
 
-	LLVMValueRef EncodeExpr_object_ref(ast_node_object_ref_t* node)
+	LLVMValueRef EncodeExprObjectRef(AstNodeObjectRef node)
 	{
-		if (node == nullptr)
-			return nullptr;
-
 		var objV = this.EncodeExpr(node.obj);
 		var keyV = builder.CreateGlobalString(node.key.cstr());
 		if (objV == nullptr || keyV == nullptr)
@@ -1175,36 +1157,33 @@ public class Coder : Module
 		return value;
 	}
 
-	bool EncodeStmt(ast_node_stmt_t* node)
+	bool EncodeStmt(AstNodeStmt node)
 	{
-		if (node == nullptr)
-			return false;
-
 		switch (node.category)
 		{
-			case ast_category_t::STRUCT_DEF:
+			case AstCategory.STRUCT_DEF:
 				return this.encode_stmt_struct_def(dynamic_cast<ast_node_struct_def_t*>(node));
-			case ast_category_t::ENUM_DEF:
+			case AstCategory.ENUM_DEF:
 				return this.encode_stmt_enum_def(dynamic_cast<ast_node_enum_def_t*>(node));
-			case ast_category_t::PROC_DEF:
+			case AstCategory.PROC_DEF:
 				return this.encode_stmt_proc_def(dynamic_cast<ast_node_proc_def_t*>(node));
-			case ast_category_t::SYMBOL_DEF:
+			case AstCategory.SYMBOL_DEF:
 				return this.encode_stmt_symbol_def(dynamic_cast<ast_node_symbol_def_t*>(node));
-			case ast_category_t::BREAK:
+			case AstCategory.BREAK:
 				return this.encode_stmt_break(dynamic_cast<ast_node_break_t*>(node));
-			case ast_category_t::CONTINUE:
+			case AstCategory.CONTINUE:
 				return this.encode_stmt_continue(dynamic_cast<ast_node_continue_t*>(node));
-			case ast_category_t::RETURN:
+			case AstCategory.RETURN:
 				return this.encode_stmt_return(dynamic_cast<ast_node_return_t*>(node));
-			case ast_category_t::IF:
+			case AstCategory.IF:
 				return this.encode_stmt_if(dynamic_cast<ast_node_if_t*>(node));
-			case ast_category_t::LOOP:
+			case AstCategory.LOOP:
 				return this.encode_stmt_loop(dynamic_cast<ast_node_loop_t*>(node));
-			case ast_category_t::BLOCK:
+			case AstCategory.BLOCK:
 				return this.encode_stmt_block(dynamic_cast<ast_node_block_t*>(node));
-			case ast_category_t::ASSIGN:
+			case AstCategory.ASSIGN:
 				return this.encode_stmt_assign(dynamic_cast<ast_node_assign_t*>(node));
-			case ast_category_t::INVOKE:
+			case AstCategory.INVOKE:
 				return this.encode_stmt_invoke(dynamic_cast<ast_node_invoke_t*>(node));
 			default:
 				return false;
@@ -1215,10 +1194,7 @@ public class Coder : Module
 
 	bool encode_stmt_struct_def(ast_node_struct_def_t* node)
 	{
-		if (node == nullptr)
-			return false;
-
-		var* thisInstanceInfo = module->new_struct(node.name);
+		var thisInstanceInfo = module->new_struct(node.name);
 
 		for ( const var 
 		&thisMember: node.members)
@@ -1230,7 +1206,7 @@ public class Coder : Module
 				return false;
 			}
 
-			var memType = this.encode_type(thisMember.type);
+			var memType = this.EncodeType(thisMember.type);
 			if (memType == nullptr)
 				return false;
 
@@ -1255,17 +1231,14 @@ public class Coder : Module
 
 	bool encode_stmt_enum_def(struct ast_node_enum_def_t* node)
 	{
-		if (node == nullptr)
-			return false;
-
 		const String name = node.name;
 
-		var* thisInstanceInfo = module->new_struct(node.name);
+		var thisInstanceInfo = module->new_struct(node.name);
 		thisInstanceInfo->add_member("value", module->type_i32);
 		thisInstanceInfo->resolve();
 
 		const String staticTypePrefix = "$_Static";
-		var* thisStaticInfo = module->new_struct(staticTypePrefix + node.name);
+		var thisStaticInfo = module->new_struct(staticTypePrefix + node.name);
 		for ( const var 
 		&thisMember: node.members)
 		{
@@ -1317,22 +1290,19 @@ public class Coder : Module
 
 	bool encode_stmt_proc_def(ast_node_proc_def_t* node)
 	{
-		if (node == nullptr)
-			return false;
-
 		if (this.scope->getSchema(node.name, false) != nullptr)
 			return false;
 
-		var* retType = this.encode_type(node.type);
+		var retType = this.EncodeType(node.type);
 
-		std::vector<llvm::Type*> argTypes;
+		List<LLVMTypeRef> argTypes;
 		for (var arg:
 		node.args)
 		{
-			var* argType = this.encode_type(arg.second);
+			var argType = this.EncodeType(arg.second);
 			if (argType == nullptr)
 				return false;
-			argTypes.push_back(argType);
+			argTypes.Add(argType);
 		}
 
 		llvm::FunctionType* procType = llvm::FunctionType::get(retType, argTypes, false);
@@ -1343,24 +1313,21 @@ public class Coder : Module
 
 	bool encode_stmt_symbol_def(struct ast_node_symbol_def_t* node)
 	{
-		if (node == nullptr)
-			return false;
-
 		if (this.scope->getSymbol(node.name, false) != nullptr)
 		{
 			this.Error("The symbol '%s' is undefined.", node.name.cstr());
 			return false;
 		}
 
-		var type = this.encode_type(node.type);
+		var type = this.EncodeType(node.type);
 		var expr = this.EncodeExpr(node.value);
 		if (expr == nullptr)
 			return false;
 
 		var value = Model.GetValue(builder, expr);
 
-		llvm::Type* stype = nullptr;
-		llvm::Type* vtype = value.TypeOf();
+		LLVMTypeRef stype = nullptr;
+		LLVMTypeRef vtype = value.TypeOf();
 		if (type != nullptr)
 		{
 			stype = type;
@@ -1409,9 +1376,6 @@ public class Coder : Module
 
 	bool encode_stmt_break(struct ast_node_break_t* node)
 	{
-		if (node == nullptr)
-			return false;
-
 		if (this.breakPoint == nullptr)
 			return false;
 
@@ -1422,9 +1386,6 @@ public class Coder : Module
 
 	bool encode_stmt_continue(struct ast_node_continue_t* node)
 	{
-		if (node == nullptr)
-			return false;
-
 		if (this.continuePoint == nullptr)
 			return false;
 
@@ -1435,9 +1396,6 @@ public class Coder : Module
 
 	bool encode_stmt_return(struct ast_node_return_t* node)
 	{
-		if (node == nullptr)
-			return false;
-
 		var expectedRetType = this.scope->func->getFunctionType()->getReturnType();
 
 		if (node.value == nullptr)
@@ -1474,9 +1432,6 @@ public class Coder : Module
 
 	bool encode_stmt_if(struct ast_node_if_t* node)
 	{
-		if (node == nullptr)
-			return false;
-
 		llvm::BasicBlock* if_true = llvm::BasicBlock::Create(context, "if.true", this.scope->func);
 		llvm::BasicBlock* if_false = llvm::BasicBlock::Create(context, "if.false", this.scope->func);
 		llvm::BasicBlock* if_end = llvm::BasicBlock::Create(context, "if.end", this.scope->func);
@@ -1536,9 +1491,6 @@ public class Coder : Module
 
 	bool encode_stmt_loop(struct ast_node_loop_t* node)
 	{
-		if (node == nullptr)
-			return false;
-
 		this.PushScope();
 
 		llvm::BasicBlock* loop_cond = llvm::BasicBlock::Create(context, "loop.cond", this.scope->func);
@@ -1602,9 +1554,6 @@ public class Coder : Module
 
 	bool encode_stmt_block(struct ast_node_block_t* node)
 	{
-		if (node == nullptr)
-			return false;
-
 		this.PushScope();
 
 		for (var stmt: node.stmts)
@@ -1620,9 +1569,6 @@ public class Coder : Module
 
 	bool encode_stmt_assign(struct ast_node_assign_t* node)
 	{
-		if (node == nullptr)
-			return false;
-
 		var left = this.EncodeExpr(node.left);
 		var right = this.EncodeExpr(node.right);
 		if (left == nullptr || right == nullptr)
@@ -1635,15 +1581,10 @@ public class Coder : Module
 		return true;
 	}
 
-	bool encode_stmt_invoke(struct ast_node_invoke_t* node)
+	bool encode_stmt_invoke(AstNodeInvoke node)
 	{
-		if (node == nullptr)
-			return false;
-
-		if (!this.EncodeExpr_func_ref(node.expr))
-			return false;
-
-		return true;
+		var expr = this.EncodeExprFuncRef(node.expr as AstNodeFuncRef);
+		return expr.Pointer != IntPtr.Zero;
 	}
 
 	private void Error(string fmt, params object[] args)
