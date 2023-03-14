@@ -24,6 +24,16 @@ public class Coder : Module
 	{
 		this.PushScope(default);
 		{
+			this.scope.AddSchema("i8", Model.TyI8);
+			this.scope.AddSchema("i16", Model.TyI16);
+			this.scope.AddSchema("i32", Model.TyI32);
+			this.scope.AddSchema("i64", Model.TyI64);
+			this.scope.AddSchema("u8", Model.TyI8);
+			this.scope.AddSchema("u16", Model.TyI16);
+			this.scope.AddSchema("u32", Model.TyI32);
+			this.scope.AddSchema("u64", Model.TyI64);
+			this.scope.AddSchema("bool", Model.TyBool);
+			
 			var entry = LLVM.AppendBasicBlock(this.scope.func, "entry");
 			LLVM.PositionBuilderAtEnd(this.builder, entry);
 
@@ -48,6 +58,9 @@ public class Coder : Module
 				var symbol = item.Value;
 
 				var expr = this.EncodeExpr(symbol.value);
+				if (expr.Pointer == IntPtr.Zero)
+					return false;
+				
 				if (!this.scope.AddSymbol(name, expr))
 				{
 					this.ErrorSymbolIsAlreadyDefined(name);
@@ -89,6 +102,9 @@ public class Coder : Module
 
 	private LLVMTypeRef EncodeType(AstNodeType node)
 	{
+		if (node == null)
+			return default;
+		
 		// TODO: implements array by Generic-Type
 		if (node.name == "array")
 		{
@@ -140,6 +156,9 @@ public class Coder : Module
 
 	private LLVMValueRef EncodeExpr(AstNodeExpr node)
 	{
+		if (node == null)
+			return default;
+		
 		switch (node.category)
 		{
 			case AstCategory.EXPR_TRINARY:
@@ -179,6 +198,9 @@ public class Coder : Module
 
 	LLVMValueRef EncodeExprTrinary(AstNodeExprTrinary node)
 	{
+		if (node == null)
+			return default;
+		
 		var trinaryBegin = LLVM.AppendBasicBlock(this.scope.func, "trinary.begin");
 		var trinaryTrue = LLVM.AppendBasicBlock(this.scope.func, "trinary.true");
 		var trinaryFalse = LLVM.AppendBasicBlock(this.scope.func, "trinary.false");
@@ -230,6 +252,9 @@ public class Coder : Module
 
 	LLVMValueRef EncodeExprBinary(AstNodeExprBinary node)
 	{
+		if (node == null)
+			return default;
+		
 		var left = this.EncodeExpr(node.left);
 		var right = this.EncodeExpr(node.right);
 		if (left.Pointer == IntPtr.Zero || right.Pointer == IntPtr.Zero)
@@ -723,6 +748,9 @@ public class Coder : Module
 
 	LLVMValueRef EncodeExprUnary(AstNodeExprUnary node)
 	{
+		if (node == null)
+			return default;
+		
 		var right = this.EncodeExpr(node.right);
 		if (right.Pointer == IntPtr.Zero)
 			return default;
@@ -785,6 +813,9 @@ public class Coder : Module
 
 	LLVMValueRef EncodeExprInt(AstNodeLiteralInt node)
 	{
+		if (node == null)
+			return default;
+		
 		ulong value = (ulong)node.value;
 		var type = Model.TyI8;
 		if (value > 0xFF)
@@ -799,16 +830,23 @@ public class Coder : Module
 
 	LLVMValueRef EncodeExprFloat(AstNodeLiteralFloat node)
 	{
+		if (node == null)
+			return default;
 		return LLVM.ConstReal(Model.TyF64, node.value);
 	}
 
 	LLVMValueRef EncodeExprBool(AstNodeLiteralBool node)
 	{
+		if (node == null)
+			return default;
 		return LLVM.ConstInt(Model.TyBool, node.value ? 1UL : 0UL, false);
 	}
 
 	LLVMValueRef EncodeExprString(AstNodeLiteralString node)
 	{
+		if (node == null)
+			return default;
+		
 		/* TODO: 
 		var str = module.string_make(this.scope.func, builder, node.value.cstr());
 		return str;
@@ -818,6 +856,9 @@ public class Coder : Module
 
 	LLVMValueRef EncodeExprSymbolRef(AstNodeSymbolRef node)
 	{
+		if (node == null)
+			return default;
+		
 		var symbol = this.scope.GetSymbol(node.name, true);
 		if (symbol == null)
 		{
@@ -859,6 +900,9 @@ public class Coder : Module
 
 	LLVMValueRef EncodeExprFuncDef(AstNodeFuncDef node)
 	{
+		if (node == null)
+			return default;
+		
 		var retType = this.EncodeType(node.rtype);
 		if (retType.Pointer == IntPtr.Zero)
 			return default;
@@ -894,7 +938,7 @@ public class Coder : Module
 			for (uint index = 0; index < node.args.Count; index++)
 			{
 				var argNode = node.args[(int)index];
-				var argVal = LLVM.GetParam(funcPtr, index + 1);
+				var argVal = LLVM.GetParam(funcPtr, index);
 
 				argVal.SetValueName(argNode.name);
 
@@ -930,6 +974,9 @@ public class Coder : Module
 
 	LLVMValueRef EncodeExprFuncRef(AstNodeFuncRef node)
 	{
+		if (node == null)
+			return default;
+		
 		LLVMValueRef funcExpr = this.EncodeExpr(node.func);
 		if (funcExpr.Pointer == IntPtr.Zero)
 		{
@@ -993,6 +1040,9 @@ public class Coder : Module
 
 	LLVMValueRef EncodeExprArrayDef(AstNodeArrayDef node)
 	{
+		if (node == null)
+			return default;
+		
 		LLVMTypeRef arrayElementType = default;
 		List<LLVMValueRef> arrayElements = new List<LLVMValueRef>();
 		foreach (var element in node.elements)
@@ -1035,6 +1085,9 @@ public class Coder : Module
 
 	LLVMValueRef EncodeExprIndexRef(AstNodeArrayRef node)
 	{
+		if (node == null)
+			return default;
+		
 		var objV = this.EncodeExpr(node.obj);
 		var keyV = this.EncodeExpr(node.key);
 		if (objV.Pointer == IntPtr.Zero || keyV.Pointer == IntPtr.Zero)
@@ -1080,6 +1133,9 @@ public class Coder : Module
 
 	LLVMValueRef EncodeExprObjectDef(AstNodeObjectDef node)
 	{
+		if (node == null)
+			return default;
+		
 		var structType = this.EncodeType(node.type);
 		if (structType.Pointer == IntPtr.Zero)
 			return default;
@@ -1137,6 +1193,9 @@ public class Coder : Module
 
 	LLVMValueRef EncodeExprObjectRef(AstNodeObjectRef node)
 	{
+		if (node == null)
+			return default;
+		
 		/* TODO:
 		var objV = this.EncodeExpr(node.obj);
 		var keyV = builder.CreateGlobalString(node.key.cstr());
@@ -1175,6 +1234,9 @@ public class Coder : Module
 
 	bool EncodeStmt(AstNodeStmt node)
 	{
+		if (node == null)
+			return false;
+		
 		switch (node.category)
 		{
 			case AstCategory.STRUCT_DEF:
@@ -1210,6 +1272,9 @@ public class Coder : Module
 
 	bool EncodeStmtStructDef(AstNodeStmt node)
 	{
+		if (node == null)
+			return false;
+		
 		/* TODO:
 		var thisInstanceInfo = module.new_struct(node.name);
 
@@ -1247,6 +1312,9 @@ public class Coder : Module
 
 	bool EncodeStmtEnumDef(AstNodeEnumDef node)
 	{
+		if (node == null)
+			return false;
+		
 		String name = node.name;
 
 		/*
@@ -1307,6 +1375,9 @@ public class Coder : Module
 
 	bool EncodeStmtProcDef(AstNodeProcDef node)
 	{
+		if (node == null)
+			return false;
+		
 		if (this.scope.GetSchema(node.name, false) != null)
 			return false;
 
@@ -1329,6 +1400,9 @@ public class Coder : Module
 
 	bool EncodeStmtSymbolDef(AstNodeSymbolDef node)
 	{
+		if (node == null)
+			return false;
+		
 		if (this.scope.GetSymbol(node.name, false) != null)
 		{
 			this.Error("The symbol '{0}' is undefined.", node.name);
@@ -1344,7 +1418,7 @@ public class Coder : Module
 
 		LLVMTypeRef stype = default;
 		LLVMTypeRef vtype = value.TypeOf();
-		if (type.Pointer == IntPtr.Zero)
+		if (type.Pointer != IntPtr.Zero)
 		{
 			stype = type;
 			do
@@ -1392,6 +1466,9 @@ public class Coder : Module
 
 	bool EncodeStmtBreak(AstNodeBreak node)
 	{
+		if (node == null)
+			return false;
+		
 		if (this.breakingPoint.Pointer == IntPtr.Zero)
 			return false;
 
@@ -1402,6 +1479,9 @@ public class Coder : Module
 
 	bool EncodeStmtContinue(AstNodeContinue node)
 	{
+		if (node == null)
+			return false;
+		
 		if (this.continuePoint.Pointer == IntPtr.Zero)
 			return false;
 
@@ -1412,6 +1492,9 @@ public class Coder : Module
 
 	bool EncodeStmtReturn(AstNodeReturn node)
 	{
+		if (node == null)
+			return false;
+		
 		var expectedRetType = LLVM.GetReturnType(this.scope.func.TypeOf());
 
 		if (node.value == null)
@@ -1449,6 +1532,9 @@ public class Coder : Module
 
 	bool EncodeStmtIf(AstNodeIf node)
 	{
+		if (node == null)
+			return false;
+		
 		var if_true = LLVM.AppendBasicBlock(this.scope.func, "if.true");
 		var if_false = LLVM.AppendBasicBlock(this.scope.func, "if.false");
 		var if_end = LLVM.AppendBasicBlock(this.scope.func, "if.end");
@@ -1508,6 +1594,9 @@ public class Coder : Module
 
 	bool EncodeStmtLoop(AstNodeLoop node)
 	{
+		if (node == null)
+			return false;
+		
 		this.PushScope(this.scope.func);
 
 		var loop_cond = LLVM.AppendBasicBlock(this.scope.func, "loop.cond");
@@ -1571,6 +1660,9 @@ public class Coder : Module
 
 	bool EncodeStmtBlock(AstNodeBlock node)
 	{
+		if (node == null)
+			return false;
+		
 		this.PushScope(this.scope.func);
 
 		foreach (var stmt in node.stmts)
@@ -1586,6 +1678,9 @@ public class Coder : Module
 
 	bool EncodeStmtAssign(AstNodeAssign node)
 	{
+		if (node == null)
+			return false;
+		
 		var left = this.EncodeExpr(node.left);
 		var right = this.EncodeExpr(node.right);
 		if (left.Pointer == IntPtr.Zero || right.Pointer == IntPtr.Zero)
@@ -1600,6 +1695,8 @@ public class Coder : Module
 
 	bool EncodeStmtInvoke(AstNodeInvoke node)
 	{
+		if (node == null)
+			return false;
 		var expr = this.EncodeExprFuncRef(node.expr as AstNodeFuncRef);
 		return expr.Pointer != IntPtr.Zero;
 	}
