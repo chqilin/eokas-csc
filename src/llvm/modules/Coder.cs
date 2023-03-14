@@ -1178,13 +1178,13 @@ public class Coder : Module
 		switch (node.category)
 		{
 			case AstCategory.STRUCT_DEF:
-				return this.encode_stmt_struct_def(dynamic_cast<ast_node_struct_def_t*>(node));
+				return this.EncodeStmtStructDef(node as AstNodeStructDef);
 			case AstCategory.ENUM_DEF:
-				return this.encode_stmt_enum_def(dynamic_cast<ast_node_enum_def_t*>(node));
+				return this.EncodeStmtEnumDef(node as AstNodeEnumDef);
 			case AstCategory.PROC_DEF:
-				return this.encode_stmt_proc_def(dynamic_cast<ast_node_proc_def_t*>(node));
+				return this.EncodeStmtProcDef(node as AstNodeProcDef);
 			case AstCategory.SYMBOL_DEF:
-				return this.encode_stmt_symbol_def(dynamic_cast<ast_node_symbol_def_t*>(node));
+				return this.EncodeStmtSymbolDef(node as AstNodeSymbolDef);
 			case AstCategory.BREAK:
 				return this.EncodeStmtBreak(node as AstNodeBreak);
 			case AstCategory.CONTINUE:
@@ -1208,12 +1208,12 @@ public class Coder : Module
 		return false;
 	}
 
-	bool encode_stmt_struct_def(ast_node_struct_def_t* node)
+	bool EncodeStmtStructDef(AstNodeStmt node)
 	{
+		/* TODO:
 		var thisInstanceInfo = module.new_struct(node.name);
 
-		for ( const var 
-		&thisMember: node.members)
+		for ( const var& thisMember: node.members)
 		{
 			const String &memName = thisMember.name;
 			if (thisInstanceInfo.get_member(memName) != nullptr)
@@ -1241,14 +1241,15 @@ public class Coder : Module
 			this.Error("There is a same schema named %s in this scope.\n", thisInstanceInfo.name.cstr());
 			return false;
 		}
-
+		*/
 		return true;
 	}
 
-	bool encode_stmt_enum_def(struct ast_node_enum_def_t* node)
+	bool EncodeStmtEnumDef(AstNodeEnumDef node)
 	{
-		const String name = node.name;
+		String name = node.name;
 
+		/*
 		var thisInstanceInfo = module.new_struct(node.name);
 		thisInstanceInfo.add_member("value", module.type_i32);
 		thisInstanceInfo.resolve();
@@ -1300,60 +1301,59 @@ public class Coder : Module
 			this.Error("There is a same symbol named %s in this scope.\n", name.cstr());
 			return false;
 		}
-
+		*/
 		return true;
 	}
 
-	bool encode_stmt_proc_def(ast_node_proc_def_t* node)
+	bool EncodeStmtProcDef(AstNodeProcDef node)
 	{
-		if (this.scope.getSchema(node.name, false) != nullptr)
+		if (this.scope.GetSchema(node.name, false) != null)
 			return false;
 
 		var retType = this.EncodeType(node.type);
 
-		List<LLVMTypeRef> argTypes;
-		for (var arg:
-		node.args)
+		List<LLVMTypeRef> argTypes = new List<LLVMTypeRef>();
+		foreach (var arg in node.args)
 		{
-			var argType = this.EncodeType(arg.second);
-			if (argType == nullptr)
+			var argType = this.EncodeType(arg.Value);
+			if (argType.Pointer == IntPtr.Zero)
 				return false;
 			argTypes.Add(argType);
 		}
 
-		llvm::FunctionType* procType = llvm::FunctionType::get(retType, argTypes, false);
-		this.scope.addSchema(node.name, procType.getPointerTo());
+		var procType = LLVM.FunctionType(retType, argTypes.ToArray(), false);
+		this.scope.AddSchema(node.name, procType.GetPointerTo());
 
 		return true;
 	}
 
-	bool encode_stmt_symbol_def(struct ast_node_symbol_def_t* node)
+	bool EncodeStmtSymbolDef(AstNodeSymbolDef node)
 	{
-		if (this.scope.getSymbol(node.name, false) != nullptr)
+		if (this.scope.GetSymbol(node.name, false) != null)
 		{
-			this.Error("The symbol '%s' is undefined.", node.name.cstr());
+			this.Error("The symbol '{0}' is undefined.", node.name);
 			return false;
 		}
 
 		var type = this.EncodeType(node.type);
 		var expr = this.EncodeExpr(node.value);
-		if (expr == nullptr)
+		if (expr.Pointer == IntPtr.Zero)
 			return false;
 
 		var value = Model.GetValue(builder, expr);
 
-		LLVMTypeRef stype = nullptr;
+		LLVMTypeRef stype = default;
 		LLVMTypeRef vtype = value.TypeOf();
-		if (type != nullptr)
+		if (type.Pointer == IntPtr.Zero)
 		{
 			stype = type;
 			do
 			{
-				if (stype == vtype)
+				if (stype.Pointer == vtype.Pointer)
 					break;
-				if (vtype.canLosslesslyBitCastTo(stype))
+				if (vtype.CanLosslesslyBitCastTo(stype))
 					break;
-				if (vtype.isPointerTy() && vtype.getPointerElementType() == stype)
+				if (vtype.IsPointerTy() && vtype.GetPointerElementType().Pointer == stype.Pointer)
 				{
 					stype = type = vtype;
 					break;
@@ -1370,20 +1370,20 @@ public class Coder : Module
 			stype = vtype;
 		}
 
-		if (stype.isVoidTy())
+		if (stype.IsVoidTy())
 		{
 			this.Error("Void-Type can't assign to a symbol.\n");
 			return false;
 		}
-
-		LLVMValueRef symbol = builder.CreateAlloca(stype);
-		builder.CreateStore(value, symbol);
+		
+		var symbol = LLVM.BuildAlloca(this.builder, stype, "");
+		LLVM.BuildStore(this.builder, value, symbol);
 		symbol = Model.RefValue(builder, symbol);
-		symbol.setName(node.name.cstr());
+		symbol.SetValueName(node.name);
 
-		if (!scope.addSymbol(node.name, symbol))
+		if (!scope.AddSymbol(node.name, symbol))
 		{
-			this.Error("There is a symbol named %s in this scope.\n", node.name.cstr());
+			this.Error("There is a symbol named {0} in this scope.", node.name);
 			return false;
 		}
 
